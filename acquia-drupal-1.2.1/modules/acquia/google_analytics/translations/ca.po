@@ -1,0 +1,173 @@
+# $Id: ca.po,v 1.1.2.1 2008/05/17 10:59:47 hass Exp $
+#
+# Catalan translation of Drupal (general)
+# Copyright 2008 Ramon Vilar Gavaldà <ramon.vilar@gmail.com>
+# Generated from files:
+#  googleanalytics.admin.inc,v 1.2.2.11 2008/02/10 13:20:53 hass
+#  googleanalytics.module,v 1.14.2.13 2007/08/27 21:21:25 budda
+#  googleanalytics.info,v 1.5.2.3 2007/12/30 20:42:58 hass
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: googleanalytics.module\n"
+"POT-Creation-Date: 2008-02-10 14:26+0100\n"
+"PO-Revision-Date: 2008-05-13 10:12+0100\n"
+"Last-Translator: Ramon Vilar Gavaldà <ramon.vilar@gmail.com>\n"
+"Language-Team: Catalan <ramon.vilar@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: googleanalytics.admin.inc:14
+msgid "Analytics Account Settings"
+msgstr "Opcions del compte d'Analytics"
+
+#: googleanalytics.admin.inc:20;77
+msgid "User ID"
+msgstr "ID d'usuari"
+
+#: googleanalytics.admin.inc:25
+msgid "The user account is unique to the websites domain. You can obtain an user account from the <a href=\"@url\">Google Analytics</a> website."
+msgstr "El compte d'usuari és únic per a tots els llocs web d'un domini. Podeu obtenir un compte d'usuari a partir d'aquest enllaç a <a href=\"@url\">Google Analytics</a>."
+
+#: googleanalytics.admin.inc:30
+msgid "Legacy Google Analytics"
+msgstr "Legacy Google Analytics"
+
+#: googleanalytics.admin.inc:32
+msgid "This will enable Legacy Google Analytics instead of most recent.<br /> Please note that Legacy Google Analytics will not receive feature updates and is not compatible with new features."
+msgstr "Això habilita Legacy Google Analytics en comptes del més recent.<br /> Tingueu en compte que Legacy Google Analytics no rep actualitzacions i no és compatible amb les noves funcionalitats."
+
+#: googleanalytics.admin.inc:40
+msgid "User Role Tracking"
+msgstr "Seguiment de rols d'usuari"
+
+#: googleanalytics.admin.inc:42
+msgid "Define what user roles should be tracked by Google Analytics. <strong>Note:</strong> Drupal Admin pages are never tracked."
+msgstr "Definiu quins rols d'usuari ha de fer el seguiment Google Analytics."
+
+#: googleanalytics.admin.inc:47
+msgid "Admin (user 1)"
+msgstr "Administrador (usuari 1)"
+
+#: googleanalytics.admin.inc:61
+msgid "User Segmentation"
+msgstr "Segmentació d'usuaris"
+
+#: googleanalytics.admin.inc:63
+msgid "If your users have profile fields completed, you can track your logged in users based on a defined profile field."
+msgstr "Si els usuaris tenen els camps de perfil emplenats, podeu fer el seguiment dels usuaris autenticats basant-vos en un camp determinat del seu perfil."
+
+#: googleanalytics.admin.inc:69
+msgid "You need to activate the !profile to use this feature."
+msgstr "Necessiteu activar el !profile per a usar aquesta funcionalitat."
+
+#: googleanalytics.admin.inc:69
+msgid "Profile module"
+msgstr "Mòdul de perfils"
+
+#: googleanalytics.admin.inc:78
+msgid "Username"
+msgstr "Nom d'usuari"
+
+#: googleanalytics.admin.inc:79
+msgid "User Roles"
+msgstr "Rols d'usuari"
+
+#: googleanalytics.admin.inc:88
+msgid "Track"
+msgstr "Fer-ne el seguiment"
+
+#: googleanalytics.admin.inc:89
+msgid "Selecting one or more values allows you to track users by profile values rather than simply an IP address. To select multiple items, hold down CTRL whilst selecting fields."
+msgstr "Seleccionant un o més valors us permet fer el seguiment als usuaris a partir de valors del seu perfil en comptes de per adreces IP. Per a seleccionar múltiples valors, apreteu CTRL mentre els seleccioneu."
+
+#: googleanalytics.admin.inc:99
+msgid "File Extensions To Track"
+msgstr "Extensions de fitxers que en voleu fer el seguiment"
+
+#: googleanalytics.admin.inc:101
+msgid "A pipe seperated list of file extensions that should be tracked when clicked. Example !extensions"
+msgstr "Una llista d'extensions de fitxers separada per barres que se n'ha de fer el seguiment quan es cliqui en ells. Per exemple !extensions"
+
+#: googleanalytics.admin.inc:106
+msgid "Advanced"
+msgstr "Avançat"
+
+#: googleanalytics.admin.inc:109
+msgid "You can add custom Google Analytics code here."
+msgstr "Podeu afegir aquí codi el personalitzat de Google Analytics"
+
+#: googleanalytics.admin.inc:114
+msgid "Cache tracking code file locally"
+msgstr "Desar en local el codi del fitxer de seguiment"
+
+#: googleanalytics.admin.inc:115
+msgid "If checked, the tracking code file is received from Google Analytics and cached locally. It is updated daily from Google's servers to ensure updates to tracking code are reflected in the local copy. Do not activate this until after Google Analytics has confirmed your tracker."
+msgstr "Si es marca aquesta opció, el fitxer de seguiment es descarregarà de Google Analytics i es desarà en local. Aquest s'actualitza diàriament des dels servidors de Google per assegurar que les actualitzacions del codi es reflecteixen a la còpia local. No activeu aquesta opció fins que Google no us confirmi el vostre seguiment."
+
+#: googleanalytics.admin.inc:120
+msgid "<a href=\"!url\">Public file transfers</a> must be enabled to allow local caching."
+msgstr "Les <a href=\"!url\">transferències de fitxers públics</a> s'han d'habilitar per a permetre la còpia local."
+
+#: googleanalytics.admin.inc:124
+msgid "Depends on: !dependencies"
+msgstr "Depèn de: !dependencies"
+
+#: googleanalytics.admin.inc:124
+msgid " (<span class=\"admin-enabled\">enabled</span>)"
+msgstr " (<span class=\"admin-enabled\">habilitat</span>)"
+
+#: googleanalytics.admin.inc:124
+msgid " (<span class=\"admin-disabled\">disabled</span>)"
+msgstr " (<span class=\"admin-disabled\">inhabilitat</span>)"
+
+#: googleanalytics.admin.inc:131
+msgid "Do Track Internal Search"
+msgstr "Fer el seguiment en cerques internes"
+
+#: googleanalytics.admin.inc:132
+msgid "If checked, internal search keywords are tracked. You must configure your Google account to use the internal query parameter <em>search</em>. For more information see <a href=\"!url\">How do I set up Site Search for my profile</a>."
+msgstr "Si es marca aquesta opció, es farà el seguiment de les paraules claus usades en cerques internes. Heu de configurar el vostre compte de Google per a usar el paràmetre de consulta intern <em>search</em>. Per a més informació aneu a <a href=\"!url\">Com configurar la cerca per al meu perfil</a>."
+
+#: googleanalytics.admin.inc:139
+msgid "JavaScript Code"
+msgstr "Codi Javascript"
+
+#: googleanalytics.admin.inc:142
+msgid "Paste <a href=\"!snippets\">custom code snippets here</a>. These will be added to every page that Google Analytics appears on. For help with this feature see the <a href=\"!blog\">cutroni.com blog</a>. <strong>Do not include the &lt;script&gt; tags</strong>, and always end your code with a semicolon (;)."
+msgstr "Copieu aquí el vostre <a href=\"@snippets\">fragment de codi personalitzat</a>. Aquest serà inclòs en totes les planes on apareix Google Analytics. Per a més informació d'aquesta funcionalitat visiteu <a href=\"@blog\">el bloc cutroni.com</a>. <strong>No incloeu les etiquetes &lt;script&gt;</strong>, i acabeu sempre el codi amb un punt i coma (;)."
+
+#: googleanalytics.module:17
+msgid "Google Analytics is a free statistics package based on the excellent Urchin system."
+msgstr "Google Analytics és un paquet d'estadístiques gratuït basat en l'excel·lent sistema Urchin."
+
+#: googleanalytics.module:176
+msgid "Google Analytics module"
+msgstr "Mòdul de Google Analytics"
+
+#: googleanalytics.module:177
+msgid "Google Analytics module has not been configured yet. Please configure its settings from the <a href=\"@url\">Google Analytics settings page</a>."
+msgstr "Encara no heu configurat el mòdul de Google Analytics. Si us plau, configuereu-lo des de <a href=\"@url\">la pàgina d'administració de Google Analytics</a>."
+
+#: googleanalytics.module:179
+msgid "Not configured"
+msgstr "No configurat"
+
+#: googleanalytics.module:24 googleanalytics.info:0
+msgid "Google Analytics"
+msgstr "Google Analytics"
+
+#: googleanalytics.module:25
+msgid "Configure the settings used to generate your Google Analytics site map."
+msgstr "Configureu les opcions per generar el Google Analytics site map"
+
+#: googleanalytics.module:0
+msgid "googleanalytics"
+msgstr "googleanalytics"
+
+#: googleanalytics.info:0
+msgid "Adds Google Analytics javascript tracking code to all your site's pages."
+msgstr "Afegiu el codi de seguiment de Google Analytics a totes les vostres pàgines."
+

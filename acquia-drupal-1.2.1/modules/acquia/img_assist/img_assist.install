@@ -1,0 +1,65 @@
+<?php
+// $Id: img_assist.install,v 1.6 2008/04/06 17:32:33 sun Exp $
+
+
+/**
+ * Implementation of hook_schema().
+ */
+function img_assist_schema() {
+  $schema['img_assist_map'] = array(
+    'description' => t('Stores references of image files to content.'),
+    'fields' => array(
+      'nid' => array(
+        'description' => t('The {node}.nid of the content referencing the image file.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'iid' => array(
+        'description' => t('The {image}.nid of the image file referenced by the content.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('nid', 'iid'),
+  );
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function img_assist_install() {
+  drupal_install_schema('img_assist');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function img_assist_uninstall() {
+  drupal_uninstall_schema('img_assist');
+
+  variable_del('img_assist_page_styling');
+  variable_del('img_assist_link');
+  variable_del('img_assist_all');
+  variable_del('img_assist_pages');
+  variable_del('img_assist_link');
+  variable_del('img_assist_preview_count');
+  variable_del('img_assist_max_size');
+  variable_del('img_assist_popup_label');
+  variable_del('img_assist_default_label');
+  variable_del('img_assist_create_derivatives');
+  variable_del('img_assist_default_link_behavior');
+  variable_del('img_assist_default_link_url');
+  variable_del('img_assist_default_insert_mode');
+  variable_del('img_assist_load_title');
+  variable_del('img_assist_load_description');
+  variable_del('img_assist_vocabs');
+  variable_del('img_assist_default_alignment');
+  variable_del('img_assist_all');
+}
+
+

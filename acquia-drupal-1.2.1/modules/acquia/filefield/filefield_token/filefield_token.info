@@ -1,0 +1,14 @@
+; $Id: filefield_token.info,v 1.1 2008/10/10 17:13:23 drewish Exp $
+name = FileField Tokens
+description = Token Integration for FileField.
+dependencies[] = filefield
+package = CCK
+core = 6.x
+php = 5.2
+
+; Information added by Acquia.com packaging script
+version = "6.x-3.0-alpha6"
+core = "6.x"
+project = "filefield"
+acquia = "1"
+

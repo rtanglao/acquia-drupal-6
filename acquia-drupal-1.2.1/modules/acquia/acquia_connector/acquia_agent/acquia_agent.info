@@ -1,0 +1,12 @@
+; $Id: acquia_agent.info,v 1.1 2008/12/30 16:51:45 pwolanin Exp $
+name = Acquia agent
+description = "Allows Drupal to securely communicate with the Acquia Network, and checks for updates to Acquia Drupal."
+package = Acquia Network
+core = 6.x
+
+; Information added by Acquia.com packaging script
+version = "6.x-1.0"
+core = "6.x"
+project = "acquia_connector"
+acquia = "1"
+

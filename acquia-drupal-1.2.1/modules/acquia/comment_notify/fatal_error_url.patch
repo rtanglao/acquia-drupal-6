@@ -1,0 +1,37 @@
+? fatal_error_url.patch
+Index: comment_notify.module
+===================================================================
+RCS file: /cvs/drupal-contrib/contributions/modules/comment_notify/comment_notify.module,v
+retrieving revision 1.32
+diff -u -p -r1.32 comment_notify.module
+--- comment_notify.module	13 Oct 2008 20:06:27 -0000	1.32
++++ comment_notify.module	24 Oct 2008 00:49:23 -0000
+@@ -355,7 +355,7 @@ function _comment_notify_mailalert($comm
+         '!commname' => $commname,
+         '!commtext' => $commtext,
+         '!commsubj' => $commsubj,
+-        '!comment_url' => url('node/'. $nid, NULL, NULL, 1) .'#comment-'. $cid,
++        '!comment_url' => url('node/'. $nid, array('absolute' => TRUE, 'fragment' => 'comment-'. $cid)),
+         '!node_title' =>  $node->title,
+         '!node_teaser' => $node->teaser,
+         '!mission' => variable_get('site_mission', ''),
+@@ -365,8 +365,8 @@ function _comment_notify_mailalert($comm
+         '!uri' => $base_url,
+         '!uri_brief' => substr($base_url, strlen('http://')),
+         '!date' => format_date(time()),
+-        '!login_uri' => url('user', NULL, NULL, 1),
+-        '!edit_uri' => url('user/'. $alert->uid .'/edit', NULL, NULL, 1)
++        '!login_uri' => url('user', array('ablsolute' => TRUE)),
++        '!edit_uri' => url('user/'. $alert->uid .'/edit', array('absolute' => TRUE))
+       )
+     );
+     drupal_mail('node_notify_mail', $author->mail, $subject, $message, $from, array());
+@@ -405,7 +405,7 @@ function _comment_notify_mailalert($comm
+           '!commname' => $comment->name,
+           '!commtext' => $comment->comment,
+           '!commsubj' => $comment->subject,
+-          '!comment_url' => url('node/'. $nid, array('absolute' => TRUE)) .'#comment-'. $cid,
++          '!comment_url' => url('node/'. $nid, array('absolute' => TRUE, 'fragment' => 'comment-'. $cid)),
+           '!node_title' =>  $node->title,
+           '!node_teaser' => $node->teaser,
+           '!mission' => variable_get('site_mission', ''),

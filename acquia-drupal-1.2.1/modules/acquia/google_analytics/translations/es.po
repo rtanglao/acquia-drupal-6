@@ -1,0 +1,108 @@
+# $Id: es.po,v 1.1.2.2 2007/11/17 20:39:32 hass Exp $
+#
+# Spanish Spain translation of Drupal (googleanalytics.module)
+# Copyright 2007 Jorge Valencia <jorgev@jorgev.es>
+# Generated from files:
+#  googleanalytics.module,v 1.1.2.1.2.5 2006/08/15 22:38:59 budda
+#  googleanalytics.info,v 1.2.2.1 2007/01/18 01:16:02 budda
+#  googleanalytics.install,v 1.2 2006/11/21 14:17:54 budda
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: googleanalytics.module\n"
+"POT-Creation-Date: 2007-09-24 18:50+0100\n"
+"PO-Revision-Date: 2007-11-01 21:48-0400\n"
+"Last-Translator: Carlos Miranda Levy <carlos@civila.com>\n"
+"Language-Team: Jorge Valencia <jorgev@jorgev.es>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Language: Spanish\n"
+"X-Poedit-Country: SPAIN\n"
+
+#: googleanalytics.module:15
+msgid "Google Analytics is a free statistics package based on the excellent Urchin system."
+msgstr "Google Analytics es un paquete de estadísticas gratuito basado en el excelente sistema Urchin."
+
+#: googleanalytics.module:25
+#: googleanalytics.info:0
+msgid "Google Analytics"
+msgstr "Google Analytics"
+
+#: googleanalytics.module:26
+msgid "Configure the settings used to generate your Google Analytics site map."
+msgstr "Configure las opciones usadas para generar su Google Analytics site map"
+
+#: googleanalytics.module:94
+msgid "Analytics Account Settings"
+msgstr "Configuraciones de la cuenta Analytics"
+
+#: googleanalytics.module:100
+msgid "User ID"
+msgstr "ID de Usuario"
+
+#: googleanalytics.module:105
+msgid "The user account is unique to the websites domain. You can obtain a user account from the <a href=\"@url\">Google Analytics</a> website."
+msgstr "La cuenta de usuario es única para todos los sitios web de un dominio. Puede obtener una cuenta de usuario a partir de este enlace <a href=\"@url\">Google Analytics</a>."
+
+#: googleanalytics.module:112
+msgid "User Role Tracking"
+msgstr "Seguimiento de roles de usuario"
+
+#: googleanalytics.module:114
+msgid "Define what user roles should be tracked by Google Analytics."
+msgstr "Defina que roles de usuario deben ser rastreados por Google Analytics."
+
+#: googleanalytics.module:129
+msgid "User Segmentation"
+msgstr "Segmentación de usuarios"
+
+#: googleanalytics.module:131
+msgid "If your users have profile fields completed, you can track your logged in users based on a defined profile field."
+msgstr "Si los usuarios tienen los campos de perfil completados, usted puede hacer rastreo de los usuarios autentificados basándose en un campo determinado del perfil de usuario."
+
+#: googleanalytics.module:137
+msgid "You need to activate the !profile to use this feature."
+msgstr "Necesita activar el !profile para usar esta funcionalidad."
+
+#: googleanalytics.module:137
+msgid "Profile module"
+msgstr "Módulo perfiles"
+
+#: googleanalytics.module:151
+msgid "Track"
+msgstr "Rastreo"
+
+#: googleanalytics.module:152
+msgid "Selecting one or more values allows you to track users by profile values rather than simply an IP address."
+msgstr "Selecionando uno o mas valores le permite hacer hacer rastreo de los usuarios por los los valores del perfil, en vez de tan solo por la dirección IP."
+
+#: googleanalytics.module:162
+msgid "Advanced"
+msgstr "Avanzado"
+
+#: googleanalytics.module:165
+msgid "You can add custom Google Analytic code here."
+msgstr "Puede añadir aquí su código personalizado de Google Analytics."
+
+#: googleanalytics.module:169
+msgid "JavaScript Code"
+msgstr "Código JavaScript"
+
+#: googleanalytics.module:172
+msgid "Paste <a href=\"@snippets\">custom code snippets here</a>. These will be added to every page that Google Analytics appears on. For help with this feature see the <a href=\"@blog\">cutroni.com blog</a>. <strong>Do not include the &lt;script&gt; tags</strong>, and always end your code with a semicolon (;)."
+msgstr "Copie aquí <a href=\"@snippets\">snippets de código personalizados</a>. Este será incluido en toas las páginas donde Google Analytics aparece. Para más ayuda con esta funcionalidad visite <a href=\"@blog\">blogue cutroni.com</a>. <strong>No incluya los tags &lt;script&gt;</strong>, y siempre termine el código com un punto y coma (;)."
+
+#: googleanalytics.module:0
+msgid "googleanalytics"
+msgstr "googleanalytics"
+
+#: googleanalytics.install:14
+msgid "Role %rolename is now being tracked by Google Analytics"
+msgstr "El rol %rolename  esta ahora siendo rastreado por  Google Analytics "
+
+#: googleanalytics.info:0
+msgid "Adds Google Analytics javascript tracking code to all your site's pages."
+msgstr "Añade el código javascript de estadísticas  de Google Analytics a todas las páginas del sitio web."
+

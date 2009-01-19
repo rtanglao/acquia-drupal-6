@@ -1,0 +1,11 @@
+; $Id: googleanalytics.info,v 1.5.2.5 2008/09/18 18:24:40 hass Exp $
+name = "Google Analytics"
+description = Adds Google Analytics javascript tracking code to all your site's pages.
+core = 6.x
+
+; Information added by Acquia.com packaging script
+version = "6.x-1.3"
+core = "6.x"
+project = "google_analytics"
+acquia = "1"
+

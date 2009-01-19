@@ -1,0 +1,13 @@
+; $Id: acquia_spi.info,v 1.1 2008/12/30 16:51:46 pwolanin Exp $
+name = Acquia site information
+description = "Sends a site profile including Acquia Drupal version, platform and module information; number of posts, comments and users; as well as file hashes and file metainformation on files in the system to the Acquia Network to facilitate support and update notifications."
+package = Acquia Network
+core = 6.x
+dependencies[] = acquia_agent
+
+; Information added by Acquia.com packaging script
+version = "6.x-1.0"
+core = "6.x"
+project = "acquia_connector"
+acquia = "1"
+

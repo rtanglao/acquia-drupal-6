@@ -1,0 +1,14 @@
+; $Id: comment_notify.info,v 1.3 2008/08/06 23:27:08 greggles Exp $
+name = Comment Notify
+description = "Comment follow-up e-mail notification for anonymous as well as registered users."
+dependencies[] = comment
+core = 6.x
+
+; Information added by Acquia.com packaging script
+core = "6.x"
+project = "comment_notify"
+version = "6.x-1.1-acquiadev-1"
+description = "Comment follow-up e-mail notification for anonymous as well as registered users. Acquia version 6.x-1.1-acquiadev-1 (Jan. 15, 2009) patched to fix fatal error. See the  <a href="http://acquia.com/release-notes/1.2.1-drupal-6.9-core">release notes</a>."
+datestamp = "1232044290"
+acquia = "1"
+

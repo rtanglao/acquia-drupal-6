@@ -1,0 +1,409 @@
+# Danish translation of Drupal (fivestar.module)
+# Generated from files:
+#  fivestar_comment.inc,v 1.1.2.11 2008/03/10 06:24:07 quicksketch
+#  fivestar_field.inc,v 1.1.4.18 2008/03/10 02:35:08 quicksketch
+#  fivestar.module,v 1.2.2.73 2008/03/10 06:24:07 quicksketch
+#  fivestar.info,v 1.1.4.1 2007/03/07 03:19:39 eaton
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Danish translation of Drupal (fivestar.module) $Id: da.po,v 1.1.2.1 2008/04/27 01:12:41 quicksketch Exp $\n"
+"POT-Creation-Date: 2008-04-15 18:41+0200\n"
+"PO-Revision-Date: 2008-04-16 14:54+0100\n"
+"Last-Translator: Frederik 'Freso' S. Olesen <freso.dk@gmail.com>\n"
+"Language-Team: Danish <dansk@dansk-gruppen.dk>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n!=1);\n"
+
+#: fivestar_comment.inc:16
+msgid "Comment widget"
+msgstr "Kommentarkontrol"
+
+#: fivestar_comment.inc:17
+msgid "Enabling Fivestar for comments will display a rating widget when a user posts a comment. The rating of the comment will affect its parent content."
+msgstr "Tilslutning af Fivestar for kommentar, vil vise en bedÃ¸mmelseskontrol nÃ¥r en bruger tilfÃ¸jer en kommentar. BedÃ¸mmelsen af kommentaren vil have effekt pÃ¥ dets overordnede indhold."
+
+#: fivestar_comment.inc:22
+msgid "Fivestar comment settings"
+msgstr "Fivestar kommentarindstillinger"
+
+#: fivestar_comment.inc:24
+msgid "Disabled"
+msgstr "Deaktiveret"
+
+#: fivestar_comment.inc:25
+msgid "Optional rating"
+msgstr "Valgfri bedÃ¸mmelse"
+
+#: fivestar_comment.inc:26
+msgid "Required rating"
+msgstr "KrÃ¦vet bedÃ¸mmelse"
+
+#: fivestar_comment.inc:32
+msgid "Comment widget preview"
+msgstr "KommentarkontrolssmagsprÃ¸ve"
+
+#: fivestar_comment.inc:60
+msgid "Rating"
+msgstr "BedÃ¸mmelse"
+
+#: fivestar_field.inc:14
+msgid "Fivestar Rating"
+msgstr "Fivestar-bedÃ¸mmelse"
+
+#: fivestar_field.inc:27
+msgid "Number of Options"
+msgstr "Antal valg"
+
+#: fivestar_field.inc:30
+msgid "The number of stars or radio buttons to display."
+msgstr "Antallet af stjerner eller radioknapper der vises"
+
+#: fivestar_field.inc:35
+msgid "Use Node Comment Parent as Target"
+msgstr "Brug overordnet indholdskommentar som mÃ¥l"
+
+#: fivestar_field.inc:39
+msgid "Use this option to easily make a Fivestar field affect the comment parent for nodes of this content type."
+msgstr "Brug denne indstilling for at lade et Fivestar-felt nemt pÃ¥virke den overordnede kommentar for indhold af denne indholdstype."
+
+#: fivestar_field.inc:45
+msgid "Target Node ID"
+msgstr "MÃ¥l indholds-id"
+
+#: fivestar_field.inc:47
+msgid "A single node ID on which this field will register the vote. If no NID is specified, the field's value will be saved, but no vote will be registered with the Voting API."
+msgstr "Et enkelt indholds-id hvorpÃ¥ dette felt vil registrere bedÃ¸mmelsen. Hvis intet id er angivet, vil feltets vÃ¦rdi blive gemt, men Voting API vil ikke registrere bedÃ¸mmelsen."
+
+#: fivestar_field.inc:53
+msgid " Return the target node ID or use plain text. Enter PHP code between <em>&lt;?php ?&gt;</em>. Note that executing incorrect PHP-code can break your Drupal site."
+msgstr " ReturnÃ©r mÃ¥lets indholds-id eller brug ren tekst. Indtast PHP-kode mellem <em>&lt;?php ?&gt;</em>. BemÃ¦rk at forkert PHP-kode kan Ã¸delÃ¦gge din Drupal-side."
+
+#: fivestar_field.inc:66
+msgid "The axis this rating will affect. Enter a property on which that this rating will affect, such as <em>quality</em>, <em>satisfaction</em>, <em>overall</em>, etc. If no axis is entered, the default axis <em>vote</em> will be used. Warning: changing this value will not update existing votes to the new axis."
+msgstr "Aksen som denne bedÃ¸mmelse vil pÃ¥virke. VÃ¦lg en egenskab som denne bedÃ¸mmelse vil pÃ¥virke, f.eks. <em>kvalitet</em>, <em>tilfredshed</em>, <em>overordnet</em>. Hvis ingen akse er angivet, vil standard aksen, <em>bedÃ¸m</em>, blive brugt. Advarsel: Ã†ndring af denne vÃ¦rdi vil ikke opdatere eksisterende bedÃ¸mmelser."
+
+#: fivestar_field.inc:143
+msgid "Radio Buttons"
+msgstr "Radioknapper"
+
+#: fivestar_field.inc:147
+msgid "Stars"
+msgstr "Stjerner"
+
+#: fivestar_field.inc:162
+msgid "Allow Clearing"
+msgstr "Tillad fortrydning"
+
+#: fivestar_field.inc:163
+msgid "True"
+msgstr "Sandt"
+
+#: fivestar_field.inc:163
+msgid "False"
+msgstr "Falsk"
+
+#: fivestar_field.inc:165
+msgid "Display a button to clear the user's current vote."
+msgstr "Vis en knap til at fortryde brugerens nuvÃ¦rende bedÃ¸mmelse."
+
+#: fivestar_field.inc:213
+msgid "As Stars"
+msgstr "Som stjerner"
+
+#: fivestar_field.inc:217
+msgid "Rating (i.e. 4.2/5)"
+msgstr "BedÃ¸mmelse (f.eks. 4,2/5)"
+
+#: fivestar_field.inc:221
+msgid "Percentage (i.e. 92)"
+msgstr "Procent (f.eks. 92)"
+
+#: fivestar.module:12
+msgid "This page is used to configure site-wide features of the fivestar module. To setup fivestar to rate content:"
+msgstr "Denne side bruges til at indstille sidens gennemgÃ¥ende funktioner for fivestar-modulet. For at indstille fivestar til at bedÃ¸mme indhold:"
+
+#: fivestar.module:14
+msgid "Configure site-wide settings for fivestar below."
+msgstr "Indstil sidens gennemgÃ¥ende indstillinger for fivestar herunder."
+
+#: fivestar.module:15
+msgid "Go to <a href=\"!types\">admin/content/types</a> and edit the type you would like to rate."
+msgstr "GÃ¥ til <a href=\"!types\">admin/content/types</a> og redigÃ©r typen af indhold du gerne vil bedÃ¸mme."
+
+#: fivestar.module:16
+msgid "On the settings page for the content type, a set of options is available for fivestar, where you can enable rating for that type and set rating options."
+msgstr "PÃ¥ indstillingssiden for denne indholdstype, er der en rÃ¦kke indstillinger tilgÃ¦ngelige for fivestar, hvor du kan aktivere bedÃ¸mmelser for denne type og vÃ¦lge bedÃ¸mmelsesindstillinger."
+
+#: fivestar.module:33
+#: fivestar.info:0
+msgid "Fivestar"
+msgstr "Fivestar"
+
+#: fivestar.module:102
+msgid "Fivestar ratings"
+msgstr "Fiverstar-bedÃ¸mmelser"
+
+#: fivestar.module:105
+msgid "To rate this content, enable Fivestar rating below. These settings will be used for both comments (if available) and direct rating."
+msgstr "For at bedÃ¸mme dette indhold, skal Fivestar-bedÃ¸mmelse aktiveres herunder. Disse indstillinger vil blive brugt til bÃ¥de kommentarer (hvis tilgÃ¦ngeligt) og direkte bedÃ¸mmelse."
+
+#: fivestar.module:112
+msgid "Enable Fivestar rating"
+msgstr "AktivÃ©r Fivestar-bedÃ¸mmelse"
+
+#: fivestar.module:120
+msgid "Number of stars"
+msgstr "Antallet af stjerner"
+
+#: fivestar.module:129
+msgid "Star Labels"
+msgstr "StjernemÃ¦rkater"
+
+#: fivestar.module:132
+msgid "These star labels appear as the link title when javascript is enabled as well as the select list options when javascript is disabled."
+msgstr "Disse stjernemÃ¦rkater vises som linkets titel, nÃ¥r javascript er aktiveret, og som select-liste vÃ¦rdier, nÃ¥r javascript er deaktiveret."
+
+#: fivestar.module:137
+msgid "Display labels on mouse over"
+msgstr "Vis mÃ¦rkater nÃ¥r musen fÃ¸res over"
+
+#: fivestar.module:141
+msgid "When enabled, the star labels will dynamically appear underneath the stars as the user hovers over each star to provide a more descriptive qualitative meaning for each star value."
+msgstr "Hvis aktiveret, vil stjernemÃ¦rkaterne dynamisk blive vist under stjernene, nÃ¥r brugere fÃ¸rer musen over hver enkelt stjerne, for at vise en mere beskrivende mening for hver stjernes vÃ¦rdi."
+
+#: fivestar.module:161
+msgid "Star @star label"
+msgstr "Stjerne @star mÃ¦rkat"
+
+#: fivestar.module:161
+msgid "Cancel label"
+msgstr "Annuller mÃ¦rkat"
+
+#: fivestar.module:171
+msgid "Direct rating widget"
+msgstr "Direkte bedÃ¸mmelseskontrol"
+
+#: fivestar.module:173
+msgid "These settings allow you to display a rating widget to your users while they are viewing content of this type. Rating will immediately register a vote for that piece of content."
+msgstr "Disse indstillinger gÃ¸r det muligt for dig at vise en bedÃ¸mmelses widget, nÃ¥r de ser denne indholdstype. Widget'en vil registrere en stemme, for dette stykke indhold, med det samme."
+
+#: fivestar.module:179
+msgid "Star display style"
+msgstr "Stjernevisningsstil"
+
+#: fivestar.module:182
+msgid "Display average vote value"
+msgstr "Vis gennemsnitlig bedÃ¸mmelsesvÃ¦rdi"
+
+#: fivestar.module:183
+msgid "Display user vote value"
+msgstr "Vis brugerbedÃ¸mmelsesvÃ¦rdi"
+
+#: fivestar.module:184;197
+msgid "User vote if available, average otherwise"
+msgstr "BrugerbedÃ¸mmelse, hvis muligt, ellers gennemsnits"
+
+#: fivestar.module:185;198
+msgid "Both user and average vote"
+msgstr "BÃ¥de bruger- og gennemsnitsbedÃ¸mmelse"
+
+#: fivestar.module:191
+msgid "Text display style"
+msgstr "Tekstvisningsstil"
+
+#: fivestar.module:194
+msgid "Display no text beneath stars"
+msgstr "Vis ikke tekst under stjerner"
+
+#: fivestar.module:195
+msgid "Current average in text"
+msgstr "NuvÃ¦rende gennemsnit i tekst"
+
+#: fivestar.module:196
+msgid "User current vote in text"
+msgstr "NuvÃ¦rende bruger bedÃ¸mmelse i tekst"
+
+#: fivestar.module:204
+msgid "Show widget title"
+msgstr "Vis kontroltitel"
+
+#: fivestar.module:211
+msgid "Allow users to undo their votes"
+msgstr "Tillad brugere at fortryde deres bedÃ¸mmelse"
+
+#: fivestar.module:218
+msgid "Teaser display"
+msgstr "SmagsprÃ¸vevisning"
+
+#: fivestar.module:221
+msgid "Rating widget above the teaser"
+msgstr "BedÃ¸mmelseskontrol over smagsprÃ¸ven"
+
+#: fivestar.module:222
+msgid "Rating widget below the teaser"
+msgstr "BedÃ¸mmelseskontrol under smagsprÃ¸ven"
+
+#: fivestar.module:223
+msgid "Static display above the teaser"
+msgstr "Statisk visning over smagsprÃ¸ven"
+
+#: fivestar.module:224
+msgid "Static display below the teaser"
+msgstr "Statisk visning under smagsprÃ¸ven"
+
+#: fivestar.module:225;238
+msgid "<Hidden>"
+msgstr "<Skjult>"
+
+#: fivestar.module:231
+msgid "Full node display"
+msgstr "Fuld indholdsvisning"
+
+#: fivestar.module:234
+msgid "Above the node body"
+msgstr "Over indholdets krop"
+
+#: fivestar.module:235
+msgid "Below the node body"
+msgstr "Under indholdets krop"
+
+#: fivestar.module:236
+msgid "Static display above the node body"
+msgstr "Statisk visning over indholdets krop"
+
+#: fivestar.module:237
+msgid "Static display below the node body"
+msgstr "Statisk visning under indholdets krop"
+
+#: fivestar.module:244
+msgid "Direct rating widget preview"
+msgstr "Direkte bedÃ¸mmelseskontrol smugkig"
+
+#: fivestar.module:379
+msgid "Widget display"
+msgstr "Widget-visning"
+
+#: fivestar.module:380
+msgid "Default"
+msgstr "Standard"
+
+#: fivestar.module:382
+msgid "Choose a widget set to be used on your site."
+msgstr "VÃ¦lg det widgetsÃ¦t der skal bruges pÃ¥ din side."
+
+#: fivestar.module:387
+msgid "Anonymous vote interval"
+msgstr "Interval for anonyme bedÃ¸mmelser"
+
+#: fivestar.module:388
+msgid "Immediately"
+msgstr "Straks"
+
+#: fivestar.module:388
+msgid "Never"
+msgstr "Aldrig"
+
+#: fivestar.module:390
+msgid "Anonymous users may add another vote after this interval. Because the same IP addresses may be used by different people, allowing the same IP to vote again several days later may yield more votes."
+msgstr "Anonyme brugere kan tilfÃ¸je en ny bedÃ¸mmelse efter dette interval. Da den samme IP-adresse kan blive brugt af flere forskellige personer, kan der opnÃ¥s flere bedÃ¸mmelser ved at lave den samme IP komme med en ny bedÃ¸mmelse efter et antal dage."
+
+#: fivestar.module:398
+msgid "Fivestar Settings"
+msgstr "Fiverstar-indstillinger"
+
+#: fivestar.module:401;407
+msgid "Preview"
+msgstr "Smugkig"
+
+#: fivestar.module:447
+msgid "Fivestar Preview"
+msgstr "Fiverstar-smugkig"
+
+#: fivestar.module:736
+msgid "Fivestar: Rate this node"
+msgstr "Fivestar: BedÃ¸m denne node"
+
+#: fivestar.module:744
+msgid "Rate This"
+msgstr "BedÃ¸m dette"
+
+#: fivestar.module:847;853;975;980;985;1214
+msgid "Your rating"
+msgstr "Din bedÃ¸mmelse"
+
+#: fivestar.module:853;859;970;980;992;1214
+msgid "Average"
+msgstr "Gennemsnit"
+
+#: fivestar.module:944
+msgid "Rate"
+msgstr "BedÃ¸m"
+
+#: fivestar.module:1025
+msgid "Your vote has been cleared."
+msgstr "Din bedÃ¸mmelse er slettet."
+
+#: fivestar.module:1028
+msgid "Thank you for your vote."
+msgstr "Tak for din bedÃ¸mmelse."
+
+#: fivestar.module:1146
+msgid "No votes yet"
+msgstr "Ingen bedÃ¸mmelser endnu"
+
+#: fivestar.module:1153
+msgid "Your rating: <span>!stars</span>"
+msgstr "Din bedÃ¸mmelse: <span>!stars</span>"
+
+#: fivestar.module:1153
+msgid "None"
+msgstr "Ingen"
+
+#: fivestar.module:1161
+msgid "Average: <span>!stars</span>"
+msgstr "Gennemsnit: <span>!stars</span>"
+
+#: fivestar.module:1250
+msgid "Select rating"
+msgstr "VÃ¦lg bedÃ¸mmelse"
+
+#: fivestar.module:1258
+msgid "Cancel rating"
+msgstr "Fortryd bedÃ¸mmelse"
+
+#: fivestar.module:1266
+msgid "Give it @star/@count"
+msgstr "Giv det @star/@count"
+
+#: fivestar.module:1306
+msgid "!name field is required."
+msgstr "!name-feltet er pÃ¥krÃ¦vet."
+
+#: fivestar.module:1313
+msgid "Fivestar Stars (display only)"
+msgstr "Fiverstar-stjerner (kun visning)"
+
+#: fivestar.module:1314
+msgid "Fivestar Stars (clickable, no text)"
+msgstr "Fiverstar-stjener (klikbar, uden tekst)"
+
+#: fivestar.module:1315
+msgid "Fivestar Stars (clickable, with text)"
+msgstr "Fiverstar-stjerner (klikbar, med tekst)"
+
+#: fivestar.module:1167
+msgid "<span>1</span> vote"
+msgid_plural "<span>@count</span> votes"
+msgstr[0] "<span>1</span> bedÃ¸mmelse"
+msgstr[1] "<span>@count</span> bedÃ¸mmelser"
+
+#: fivestar.info:0
+msgid "A simple five-star voting widget for nodes."
+msgstr "En simpel fivestar bedÃ¸mmelses widget for indhold."
+
+#: fivestar.info:0
+msgid "Voting"
+msgstr "BedÃ¸mmelse"

@@ -1,0 +1,1215 @@
+<?php
+// $Id: mollom.module,v 1.2.2.54 2009/01/06 08:08:33 dries Exp $
+
+/**
+ * @file
+ * Main file for the Mollom module, which protects against comment and contact form spam..
+ */
+
+define('MOLLOM_API_VERSION', '1.0');
+
+define('MOLLOM_ANALYSIS_UNKNOWN', 0);
+define('MOLLOM_ANALYSIS_HAM'    , 1);
+define('MOLLOM_ANALYSIS_SPAM'   , 2);
+define('MOLLOM_ANALYSIS_UNSURE' , 3);
+
+define('MOLLOM_MODE_DISABLED', 0);
+define('MOLLOM_MODE_CAPTCHA' , 1);
+define('MOLLOM_MODE_ANALYSIS', 2);
+
+define('MOLLOM_FALLBACK_BLOCK' , 0);
+define('MOLLOM_FALLBACK_ACCEPT', 1);
+
+define('MOLLOM_ERROR'   , 1000);
+define('MOLLOM_REFRESH' , 1100);
+define('MOLLOM_REDIRECT', 1200);
+
+/**
+ * Implementation of hook_help().
+ */
+function mollom_help($path, $arg) {
+  if ($path == 'admin/settings/mollom') {
+    return t("Allowing users to react, participate and contribute while still keeping your site's content under control can be a huge challenge. Mollom is a web service that helps you identify content quality and, more importantly, helps you stop spam. When content moderation becomes easier, you have more time and energy to interact with your web community. More information about Mollom is available on the <a href=\"@mollom-website\">Mollom website</a> or in the <a href=\"@mollom-faq\">Mollom FAQ</a>.",
+      array(
+        '@mollom-website' => 'http://mollom.com',
+        '@mollom-faq' => 'http://mollom.com/faq',
+      ));
+  }
+}
+
+/**
+ * Implementation of hook_link().
+ */
+function mollom_link($type, $object = NULL) {
+  // We extend the comment links so people can send feedback:
+  if ($type == 'comment' && user_access('administer comments') && _mollom_get_mode('comment_form')) {
+    $links['comment_spam'] = array(
+        'title' => t('mark as abuse'),
+        'href' => "mollom/comment/$object->cid"
+    );
+
+    return $links;
+  }
+
+  if ($type == 'node' && user_access('administer nodes') && _mollom_get_mode($object->type .'_node_form')) {
+    $links['node_spam'] = array(
+        'title' => t('Delete post'),
+        'href' => "mollom/node/$object->nid"
+    );
+
+    return $links;
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function mollom_menu() {
+  $items['mollom/comment'] = array(
+    'title' => 'Report and delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mollom_report_comment'),
+    'access arguments' => array('administer comments'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['mollom/node'] = array(
+    'title' => 'Report and delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mollom_report_node'),
+    'access arguments' => array('administer nodes'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['mollom/contact'] = array(
+    'title' => 'Report and delete',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mollom_report_contact'),
+    'access arguments' => array(TRUE), // Everyone can report contact form feedback.
+    'type' => MENU_CALLBACK,
+  );
+  $items['admin/settings/mollom'] = array(
+    'description' => 'Mollom is a web service that helps you manage your community.',
+    'title' => 'Mollom',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mollom_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+
+  // Menu callback used for AJAX purposes:
+  $items['mollom/captcha/%/%'] = array(
+    'title' => 'Request CAPTCHA',
+    'page callback' => 'mollom_captcha_js',
+    'page arguments' => array(2, 3),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function mollom_perm() {
+  return array('post with no checking');
+}
+
+/**
+ * AJAX callback to retrieve a CAPTCHA.
+ */
+function mollom_captcha_js($type, $session_id) {
+
+  // TODO: add error handling.
+  $output = '';
+
+  if ($type == 'audio') {
+    $response = mollom('mollom.getAudioCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
+
+    if ($response) {
+      $output  = '<embed src="'. check_plain($response['url']) .'" autostart="true" width="120" height="30" />';
+      $output .= ' (<a href="#" id="image-captcha">'. t('use image CAPTCHA') .'</a>)';
+    }
+  }
+
+  if ($type == 'image') {
+    $response = mollom('mollom.getImageCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
+
+    if ($response) {
+      $output = '<a href="http://mollom.com"><img src="'. check_plain(url($response['url'])) .'" alt="Mollom CAPTCHA" /></a>';
+      $output .= ' (<a href="#" id="audio-captcha">'. t('play audio CAPTCHA') .'</a>)';
+    }
+  }
+
+  print $output;
+  exit();
+}
+
+/**
+ * Helper function to load a Mollom session ID from the database.
+ */
+function mollom_get_data($did) {
+  return db_fetch_object(db_query("SELECT * FROM {mollom} WHERE did = '%s'", $did));
+}
+
+/**
+ * Helper function to store a Mollom session ID into the database.
+ */
+function mollom_set_data($session, $quality, $reputation, $languages, $did) {
+  if (db_result(db_query("SELECT session FROM {mollom} WHERE did = '%s'", $did))) {
+    db_query("UPDATE {mollom} SET session = '%s', quality = '%s', reputation = '%s', languages = '%s' WHERE did = '%s'", $session, $quality, $reputation, $languages, $did);
+  }
+  else {
+    db_query("INSERT INTO {mollom} (session, quality, reputation, languages, did) VALUES ('%s', '%s', '%s', '%s', '%s')", $session, $quality, $reputation, $languages, $did);
+  }
+}
+
+/**
+ * Return a list of the possible feedback options for content.
+ */
+function _mollom_feedback_options() {
+  return array(
+    '#type' => 'radios',
+    '#title' => t('Optionally report this to Mollom'),
+    '#options' => array(
+      'none' => t("Don't send feedback to Mollom"),
+      'spam' => t('Report as spam or unsolicited advertising'),
+      'profanity' => t('Report as obscene, violent or profane content'),
+      'low-quality' => t('Report as low-quality content or writing'),
+      'unwanted' => t('Report as unwanted, taunting or off-topic content'),
+    ),
+    '#default_value' => 'none',
+    '#description' => t("Mollom is a web service that helps you moderate your site's content: see <a href=\"http://mollom.com\">http://mollom.com</a> for more information. By sending feedback to Mollom, you teach Mollom about the content you like and dislike, allowing Mollom to do a better job helping you moderate your site's content. If you want to report multiple posts at once, you can use Mollom's bulk operations on the content and comment administration pages."),
+  );
+}
+
+/**
+ * This function reports a comment as feedback and deletes it.
+ */
+function mollom_report_comment($form_state, $cid) {
+  if ($comment = _comment_load($cid)) {
+    $form['cid'] = array('#type' => 'value', '#value' => $cid);
+    $form['feedback'] = _mollom_feedback_options();
+
+    return confirm_form($form,
+      t('Are you sure you want to delete the comment and report it?'),
+      isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $comment->nid,
+      t('This action cannot be undone.'),
+      t('Delete'), t('Cancel'));
+  }
+}
+
+/**
+ * This function deletes a comment and optionally sends feedback to Mollom.
+ */
+function mollom_report_comment_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    if ($comment = _comment_load($form_state['values']['cid'])) {
+      // Load the Mollom session data:
+      $data = mollom_get_data('comment-'. $comment->cid);
+
+      // Provide feedback to Mollom if available:
+      if (isset($data) && isset($data->session) && isset($form_state['values']['feedback'])) {
+        mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => $form_state['values']['feedback']));
+      }
+
+      // Delete a comment and its replies:
+      include_once drupal_get_path('module', 'comment') .'/comment.admin.inc';
+      _comment_delete_thread($comment);
+      _comment_update_node_statistics($comment->nid);
+      cache_clear_all();
+
+      drupal_set_message(t('The comment has been deleted.'));
+    }
+  }
+  $form_state['redirect'] = "node/$comment->nid";
+}
+
+/**
+ * This function deletes a node and optionally sends feedback to Mollom.
+ */
+function mollom_report_node($form_state, $nid) {
+  if ($node = node_load($nid)) {
+    $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
+    $form['feedback'] = _mollom_feedback_options();
+
+    return confirm_form($form,
+      t('Are you sure you want to delete %title and report it?', array('%title' => $node->title)),
+      isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $node->nid,
+      t('This action cannot be undone.'),
+      t('Delete'), t('Cancel'));
+  }
+}
+
+/**
+ * This function deletes a node and optionally sends feedback to Mollom.
+ */
+function mollom_report_node_submit($form, &$form_state) {
+  if ($form_state['values']['confirm']) {
+    if ($node = node_load($form_state['values']['nid'])) {
+      // Load the Mollom session data:
+      $data = mollom_get_data('node-'. $node->nid);
+
+      // Provide feedback to Mollom if available:
+      if ($data->session && $form_state['values']['feedback']) {
+        mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => $form_state['values']['feedback']));
+      }
+
+      // Delete the node.  Calling this function will delete any comments,
+      // clear the cache and print a status message.
+      node_delete($node->nid);
+    }
+  }
+
+  $form_state['redirect'] = '<front>';
+}
+
+/**
+ * This function adds a 'report as inappropriate' link to the e-mails sent
+ * by the contact module.
+ */
+function mollom_mail_alter(&$message) {
+  if (isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
+    $message['body'][] = t('Report as inappropriate: @link', array('@link' => url('mollom/contact/'. $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE))));
+  }
+}
+
+/**
+ * This function reports a contact form message as inappropriate.
+ */
+function mollom_report_contact($form_state, $session) {
+  $form['session'] = array('#type' => 'value', '#value' => $session);
+  $form['feedback'] = _mollom_feedback_options();
+
+  return confirm_form($form,
+  t('Are you sure you want to report the e-mail message as inappropriate?'),
+  isset($_GET['destination']) ? $_GET['destination'] : '',
+  t('This action cannot be undone.'),
+  t('Report as inappropriate'), t('Cancel'));
+}
+
+/**
+ * This function reports a contact form message as inappropriate.
+ */
+function mollom_report_contact_submit($form, &$form_state) {
+  if ($form_state['values']['feedback']) {
+    mollom('mollom.sendFeedback', array('session_id' => $form_state['values']['session'], 'feedback' => $form_state['values']['feedback']));
+    drupal_set_message(t('The e-mail has been reported as inappropriate.'));
+  }
+
+  $form_state['redirect'] = '<front>';
+}
+
+/**
+ * This function implements the _nodeapi hook and is called when a node is inserted.
+ */
+function mollom_nodeapi($node, $op) {
+  if ($op == 'insert' && isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
+    $quality = $GLOBALS['mollom_response']['quality'];
+    $reputation = $GLOBALS['mollom_response']['reputation'];
+    $languages = isset($GLOBALS['mollom_response']['languages']) ? implode(' ', $GLOBALS['mollom_response']['languages']) : '';
+    mollom_set_data($GLOBALS['mollom_response']['session_id'], $quality, $reputation, $languages, 'node-'. $node->nid);
+  }
+}
+
+/**
+ * This function implements the _comment hook and is called when a comment is inserted.
+ */
+function mollom_comment($comment, $op) {
+  if ($op == 'insert' && isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
+    $quality = $GLOBALS['mollom_response']['quality'];
+    $reputation = $GLOBALS['mollom_response']['reputation'];
+    $languages = isset($GLOBALS['mollom_response']['languages']) ? implode(' ', $GLOBALS['mollom_response']['languages']) : '';
+    mollom_set_data($GLOBALS['mollom_response']['session_id'], $quality, $reputation, $languages, 'comment-'. $comment['cid']);
+  }
+}
+
+/**
+ * This helper function is necessary to insert the CAPTCHA into the form.
+ * It's quite an ugly hack due to Drupal 6's inability to handle dynamic
+ * forms.  Let's try to fix this in Drupal 7 and beyond.
+ */
+function mollom_form_value() {
+  return '';
+}
+
+/**
+ * This function intercepts all forms in Drupal and Mollom-enables them if
+ * necessary.
+ */
+function mollom_form_alter(&$form, $form_state, $form_id) {
+  // Catch all handlers -- this makes it easy to protect all forms
+  // with Mollom.  Site administrators don't have their content
+  // checked with Mollom.
+  if (!user_access('post with no checking')) {
+    // Retrieve the mode of protection required for this form:
+    $mode = _mollom_get_mode($form_id);
+
+    if ($mode) {
+      // Compute the weight of the CAPTCHA so we can position it in the form.
+      $weight = 99999;
+      foreach (element_children($form) as $key) {
+        // Iterate over the form elements looking for buttons:
+        if (isset($form[$key]['#type']) && ($form[$key]['#type'] == 'submit' || $form[$key]['#type'] == 'button')) {
+          // For each button, slightly increase the weight to allocate
+          // room for the CAPTCHA:
+          if (isset($form[$key]['#weight'])) {
+            $form[$key]['#weight'] = $form[$key]['#weight'] + 0.0002;
+          }
+          else {
+            $form[$key]['#weight'] = 1.0002;
+          }
+
+          // We want to position the CAPTCHA just before the first button so
+          // we make the CAPTCHA's weight slightly lighter than the lightest
+          // button's weight.
+          $weight = min($weight, $form[$key]['#weight'] - 0.0001);
+        }
+      }
+
+      // Add Mollom form protection widget.
+      $form['mollom'] = array(
+        '#type' => 'mollom',
+        '#mode' => $mode,
+      );
+
+      // Add a submit handler that will clean the Mollom state as soon as the form
+      // is successfully submitted.
+      $form['#submit'][] = 'mollom_clean_state';
+    }
+  }
+
+  // Hook into the mass comment administration page and add some
+  // operations to communicate ham/spam to the XML-RPC server:
+  if ($form_id == 'comment_admin_overview') {
+    $form['options']['operation']['#options']['mollom-unpublish'] = t('Report to Mollom as spam and unpublish');
+    $form['options']['operation']['#options']['mollom-delete'] = t('Report to Mollom as spam and delete');
+    $form['#validate'][] = 'mollom_comment_admin_overview_submit';
+  }
+
+
+  // Hook into the mass comment administration page and add some
+  // operations to communicate ham/spam to the XML-RPC server:
+  if ($form_id == 'node_admin_content') {
+    $form['options']['operation']['#options']['mollom-unpublish'] = t('Report to Mollom as spam and unpublish');
+    $form['options']['operation']['#options']['mollom-delete'] = t('Report to Mollom as spam and delete');
+    $form['#validate'][] = 'mollom_node_admin_overview_submit';
+  }
+}
+
+function mollom_comment_admin_overview_submit($form, &$form_state) {
+  // The operation has the following format: <operation>,
+  // where '<operation>' can be 'unpublish' or 'delete'.
+  list($id, $operation) = explode('-', $form_state['values']['operation']);
+
+  if ($id == 'mollom') {
+    foreach ($form_state['values']['comments'] as $cid => $value) {
+      if ($value) {
+        // First, send the proper information to the XML-RPC server:
+        if ($data = mollom_get_data('comment-'. $cid)) {
+          mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => 'spam'));
+        }
+
+        // Second, perform the proper operation on the comments:
+        if ($comment = _comment_load($cid)) {
+          if ($operation == 'unpublish') {
+            db_query("UPDATE {comments} SET status = %d WHERE cid = %d", COMMENT_NOT_PUBLISHED, $cid);
+            _comment_update_node_statistics($comment->nid);
+          }
+          elseif ($operation == 'delete') {
+            _comment_delete_thread($comment);
+            _comment_update_node_statistics($comment->nid);
+          }
+        }
+      }
+    }
+
+    // Clear the cache:
+    cache_clear_all();
+
+    if ($operation == 'delete') {
+      drupal_set_message(t('The selected comments have been reported as inappropriate and are deleted.'));
+    }
+    else {
+      drupal_set_message(t('The selected comments have been reported as inappropriate and are unpublished.'));
+    }
+  }
+}
+
+function mollom_node_admin_overview_submit($form, &$form_state) {
+  // The operation has the following format: <operation>,
+  // where '<operation>' can be 'unpublish' or 'delete'.
+  list($id, $operation) = explode('-', $form_state['values']['operation']);
+
+  if ($id == 'mollom') {
+    foreach ($form_state['values']['nodes'] as $nid => $value) {
+      if ($value) {
+        if ($data = mollom_get_data('node-'. $nid)) {
+          mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => 'spam'));
+        }
+
+        if ($node = node_load($nid)) {
+          if ($operation == 'unpublish') {
+            db_query('UPDATE {node} SET status = 0 WHERE nid = %d', $nid);
+          }
+          elseif ($operation == 'delete') {
+            node_delete($nid);
+          }
+        }
+      }
+    }
+
+    // Clear the cache:
+    cache_clear_all();
+
+    if ($operation == 'delete') {
+      drupal_set_message(t('The selected posts have been reported as inappropriate and are deleted.'));
+    }
+    else {
+      drupal_set_message(t('The selected posts have been reported as inappropriate and are unpublished.'));
+    }
+  }
+}
+
+/**
+ * This function will be called by mollom_validate to prepare the
+ * XML-RPC data from the comment submission form's $form_state['values'] ...
+ */
+function _mollom_data_contact_mail($form_state) {
+  global $user;
+
+  $data = array(
+    'post_title'    => isset($form_state['subject']) ? $form_state['subject'] : NULL,
+    'post_body'     => isset($form_state['message']) ? $form_state['message'] : NULL,
+    'author_name'   => isset($form_state['name']) ? $form_state['name'] : (isset($user->name) ? $user->name : NULL),
+    'author_mail'   => isset($form_state['mail']) ? $form_state['mail'] : (isset($user->mail) ? $user->mail : NULL),
+    'author_openid' => isset($user->uid) ? _mollom_get_openid($user) : NULL,
+    'author_id'     => $user->uid > 0 ? $user->uid : NULL,
+    'author_ip'     => ip_address(),
+  );
+
+  return $data;
+}
+
+/**
+ * This function is called by mollom_validate to prepare the XML-RPC data
+ * from the comment submission form's $form_state['values'] ...
+ */
+function mollom_data_contact_mail_page($form_state) {
+  return _mollom_data_contact_mail($form_state);
+}
+
+/**
+ * This function is called by mollom_validate to prepare the XML-RPC data
+ * from the comment submission form's $form_state['values'] ...
+ */
+function mollom_data_contact_mail_user($form_state) {
+  return _mollom_data_contact_mail($form_state);
+}
+
+/**
+ * This function is called by mollom_validate to prepare the XML-RPC data
+ * from the comment submission form's $form_state['values'] ...
+ */
+function mollom_data_comment_form($form_state) {
+  global $user;
+
+  $data = array(
+    'post_title'    => isset($form_state['subject']) ? $form_state['subject'] : NULL,
+    'post_body'     => isset($form_state['comment']) ? $form_state['comment'] : NULL,
+    'author_name'   => isset($form_state['name']) ? $form_state['name'] : (isset($user->name) ? $user->name : NULL),
+    'author_mail'   => isset($form_state['mail']) ? $form_state['mail'] : (isset($user->mail) ? $user->mail : NULL),
+    'author_url'    => isset($form_state['homepage']) ? $form_state['homepage'] : NULL,
+    'author_openid' => isset($user->uid) ? _mollom_get_openid($user) : NULL,
+    'author_id'     => $user->uid > 0 ? $user->uid : NULL,
+    'author_ip'     => isset($form_state['cid']) ? NULL : ip_address(),
+  );
+
+  return $data;
+}
+
+/**
+ * This function is called by mollom_validate to prepare the XML-RPC data
+ * from the comment submission form's $form_state['values'] ...
+ */
+function mollom_data_node_form($form_state) {
+  global $user;
+
+  // Render the node so that all visible fields are prepared and
+  // concatenated:
+  $data = node_build_content((object)$form_state, FALSE, FALSE);
+  $content = drupal_render($data->content);
+
+  $data = array(
+    'post_title'    => isset($form_state['title']) ? $form_state['title'] : NULL,
+    'post_body'     => $content,
+    'author_name'   => isset($form_state['name']) ? $form_state['name'] : (isset($user->name) ? $user->name : NULL),
+    'author_mail'   => isset($form_state['mail']) ? $form_state['mail'] : (isset($user->mail) ? $user->mail : NULL),
+    'author_url'    => isset($form_state['homepage']) ? $form_state['homepage'] : NULL,
+    'author_openid' => isset($user->uid) ? _mollom_get_openid($user) : NULL,
+    'author_id'     => $user->uid > 0 ? $user->uid : NULL,
+    'author_ip'     => isset($form_state['nid']) ? '' : ip_address(),
+  );
+
+  return $data;
+}
+
+/**
+ * Given a form ID, this function returns the strategy that is used
+ * to protect this form.  Could be MOLLOM_MODE_DISABLED (none),
+ * MOLLOM_MODE_CAPTCHA (CAPTCHAs only) or MOLLOM_MODE_ANALYSIS (text
+ * analysis with smart CAPTCHA support).
+ */
+function _mollom_get_mode($form_id) {
+  $mode = variable_get('mollom_'. $form_id, NULL);
+  if (!isset($mode)) {
+    $forms = _mollom_protectable_forms();
+    return isset($forms[$form_id]['mode']) ? $forms[$form_id]['mode'] : MOLLOM_MODE_DISABLED;
+  }
+
+  return $mode;
+}
+
+/**
+ * This function lists all the forms that can be protected with Mollom.
+ * If you want to protect additional forms with Mollom, add the form ID
+ * to this list.
+ */
+function _mollom_protectable_forms() {
+  static $forms = NULL;
+
+  if (!$forms) {
+    if (module_exists('comment')) {
+      $forms['comment_form'] = array(
+        'name' => 'comment form',
+        'mode' => MOLLOM_MODE_ANALYSIS,
+      );
+    }
+
+    if (module_exists('contact')) {
+      $forms['contact_mail_page'] = array(
+        'name' => 'site-wide contact form',
+        'mode' => MOLLOM_MODE_ANALYSIS,
+      );
+
+      $forms['contact_mail_user'] = array(
+        'name' => 'per-user contact forms',
+        'mode' => MOLLOM_MODE_ANALYSIS,
+      );
+    }
+
+    $forms['user_register'] = array(
+      'name' => 'user registration form',
+      'mode' => MOLLOM_MODE_CAPTCHA,
+    );
+
+    $forms['user_pass'] = array(
+      'name' => 'user password request form',
+      'mode' => MOLLOM_MODE_CAPTCHA,
+    );
+
+    // Add all the node types:
+    $types = node_get_types('names');
+    foreach ($types as $type => $name) {
+      $forms[$type .'_node_form'] = array(
+        'name' => drupal_strtolower($name) .' form',
+        'mode' => MOLLOM_MODE_ANALYSIS,
+      );
+    }
+  }
+
+  return $forms;
+}
+
+// Temporary test code.
+function _mollom_update_comments() {
+  $result = db_query_range('SELECT * FROM {comments}', 0, 1000);
+  while ($comment = db_fetch_object($result)) {
+    $data = array(
+      'post_title' => $comment->subject,
+      'post_body'  => $comment->comment,
+    );
+
+    $response = mollom('mollom.checkContent', $data);
+    if ($response['spam'] == MOLLOM_ANALYSIS_SPAM) {
+      print "$comment->subject<br />$comment->comment<hr />";
+    }
+    else {
+      print $response['spam'];
+    }
+  }
+}
+
+function mollom_admin_settings() {
+
+  // _mollom_update_comments();
+
+  $keys = variable_get('mollom_public_key', '') && variable_get('mollom_private_key', '');
+
+  if ($keys) {
+    // Print a status message about the key:
+    if (!$_POST) {
+      // When a user visits the Mollom administration page, automatically
+      // clear the server list.  This causes the client to fetch a fresh
+      // server list from the server.
+      variable_del('mollom_servers');
+
+      // Verify the key:
+      _mollom_verify_key();
+    }
+
+    $form['statistics'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Site usage statistics'),
+        '#collapsible' => TRUE,
+    );
+    $form['statistics']['message'] = array(
+      '#value' => '<div><embed src="http://mollom.com/statistics.swf?key='. check_plain(variable_get('mollom_public_key', '')) .'" quality="high" width="100%" height="430" name="Mollom" align="middle" play="true" loop="false" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer"></embed></div>',
+    );
+
+    $form['spam'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Spam protection settings'),
+      '#description' =>
+        '<p>'. t("Mollom can be used to block all types of spam received on your website's protected forms. Each form can be set to one of the following options:") .'</p>'.
+        '<ul><li>'. t("<strong>Text analysis and CAPTCHA backup</strong>: Mollom analyzes the data submitted on the form and presents a CAPTCHA challenge if necessary. This option is strongly recommended, as it takes full advantage of the Mollom anti-spam service to categorize your posts into ham (not spam) and spam.") .'</li>'.
+        '<li>'. t("<strong>CAPTCHA only</strong>: the form's data is not sent to Mollom for analysis, and a remotely-hosted CAPTCHA challenge is always presented. This option is useful when you wish to always display a CAPTCHA or want to send less data to the Mollom network. Note, however, that forms displayed with a CAPTCHA are never cached, so always displaying a CAPTCHA challenge may reduce performance.") .'</li>'.
+        '<li>'. t('<strong>No protection</strong>: Mollom is not used with this form.') .'</li></ul>'.
+        '<p>'. t("Data is processsed and stored as explained in our <a href=\"http://mollom.com/service-agreement-free-subscriptions\">Web Service Privacy Policy</a>. It is your responsibility to provide any necessary notices and obtain the appropriate consent regarding Mollom's use of your data. For more information, see <a href=\"http://mollom.com/how-mollom-works\">How Mollom Works</a> and the <a href=\"http://mollom.com/faq\">Mollom FAQ</a>.") .'</p>',
+      '#collapsible' => TRUE,
+    );
+
+    $forms = _mollom_protectable_forms();
+    foreach ($forms as $form_id => $details) {
+      $mode = _mollom_get_mode($form_id);
+      $name = 'mollom_'. $form_id;
+
+      $options = array_slice(array(
+        MOLLOM_MODE_DISABLED => t('No protection'),
+        MOLLOM_MODE_CAPTCHA => t('CAPTCHA only'),
+        MOLLOM_MODE_ANALYSIS => t('Text analysis and CAPTCHA backup'),
+      ), 0, $details['mode'] + 1);
+
+      $form['spam'][$name] = array(
+        '#type' => 'select',
+        '#title' => t('Protect @name', array('@name' => $details['name'])),
+        '#options' => $options,
+        '#default_value' => $mode,
+      );
+    }
+
+    $form['server'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Server settings'),
+      '#collapsible' => TRUE,
+      '#collapsed' => $keys,
+    );
+    $form['server']['mollom_fallback'] = array(
+      '#type' => 'radios',
+      '#title' => t('Fallback strategy'),
+      '#default_value' => variable_get('mollom_fallback', MOLLOM_FALLBACK_BLOCK), // we default to treating everything as inappropriate
+      '#options' => array(
+        MOLLOM_FALLBACK_BLOCK => t('Block all submissions of protected forms until the server problems are resolved'),
+        MOLLOM_FALLBACK_ACCEPT => t('Leave all forms unprotected and accept all submissions'),
+      ),
+      '#description' => t('When the Mollom servers are down or otherwise unreachable, no text analysis is performed and no CAPTCHAs are generated. If this occurs, your Drupal site will use the configured fallback strategy, and will either accept all submissions without spam checking, or block all submissions until the server or connection problems are resolved. Subscribers to <a href="@pricing">Mollom Plus</a> receive access to <a href="@sla">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array('@pricing' => 'http://mollom.com/pricing', '@sla' => 'http://mollom.com/standard-service-level-agreement')));
+  }
+
+  $form['access-keys'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Mollom access keys'),
+    '#description' => t('In order to use Mollom, you need both a public and private key. To obtain your keys, simply <a href="http://mollom.com/user/register">create a user account on mollom.com</a>, <a href="http://mollom.com/user">login to mollom.com</a>, and <a href="http://mollom.com/site-manager/add">create a subscription</a> for your site.  Once you created a subscription, your private and public access keys will be available from the <a href="http://mollom.com/site-manager">site manager on mollom.com</a>. Copy-paste them in the form below, and you are ready to go.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => $keys,
+  );
+  $form['access-keys']['mollom_public_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Public key'),
+    '#default_value' => variable_get('mollom_public_key', ''),
+    '#description' => t('The public key is used to uniquely identify you.'),
+    '#required' => TRUE,
+  );
+  $form['access-keys']['mollom_private_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Private key'),
+    '#default_value' => variable_get('mollom_private_key', ''),
+    '#description' => t('The private key is used to prevent someone from hijacking your requests. Similar to a password, it should never be shared with anyone.'),
+    '#required' => TRUE,
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * A helper function that returns the OpenID identifiers associated with the specified user account.
+ */
+function _mollom_get_openid($account) {
+  if (isset($account->uid)) {
+    $result = db_query("SELECT * FROM {authmap} WHERE module = 'openid' AND uid = %d", $account->uid);
+
+    $ids = array();
+    while ($identity = db_fetch_object($result)) {
+      $ids[] = $identity->authname;
+    }
+
+    if (count($ids)) {
+      return implode($ids, ' ');
+    }
+  }
+}
+
+function _mollom_fallback() {
+  $fallback = variable_get('mollom_fallback', MOLLOM_FALLBACK_BLOCK);
+  if ($fallback == MOLLOM_FALLBACK_BLOCK) {
+    form_set_error('mollom', t("The spam filter installed on this site is currently unavailable. Per site policy, we are unable to accept new submissions until that problem is resolved. Please try resubmitting the form in a couple of minutes."));
+  }
+
+  watchdog('mollom', 'All Mollom servers were unavailable: %servers, last error: @errno - %error_msg', array('%servers' => print_r(variable_get('mollom_servers', array()), TRUE), '@errno' => xmlrpc_errno(), '%error_msg' => xmlrpc_error_msg()), WATCHDOG_ERROR);
+}
+
+/**
+ * Implementation of hook_elements().
+ */
+function mollom_elements() {
+  return array(
+    'mollom' => array(
+      '#input' => TRUE,
+      '#process' => array(
+        'mollom_expand_element',
+      ),
+    ),
+  );
+}
+
+/**
+ * Expand the mollom element via #process. 
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ * @param $edit
+ *   An associative array of values posted specifically to that element.
+ * @param $form_state
+ *   The state of the parent form.
+ * @return
+ *   The mollom element expanded with a captcha if necessary.
+ */
+function mollom_expand_element($element, $edit, &$form_state) {
+  $element['#tree'] = TRUE;
+
+  // The mollom form is stateful. The Mollom Session ID, exchanged between
+  // Drupal, the mollom back-end and the user, allow us to keep track of the
+  // state of validation of a form. That ID is valid for a specific user session
+  // and for a given form_id only. We expire it as soon as the form is
+  // submitted, to avoid it being replayed.
+  
+  // The current state can come either from the $form_state, if the form
+  // was just rebuilt in the same request...
+  if (!empty($form_state['mollom'])) {
+    $mollom_state = $form_state['mollom'];
+  }
+  // ... or from data posted by the user. In that case we validate that the correct
+  // form_id and user session ID is used...
+  else if (!empty($edit['session_id']) && ($cache = cache_get($edit['session_id'], 'cache_mollom'))
+    && $cache->data['#form_id'] === $form_state['values']['form_id'] && $cache->data['#user_session_id'] === session_id()) {
+    $mollom_state = $cache->data;
+  }
+
+  // ... finally, if no valid state has been found, we generate an empty one.
+  if (empty($mollom_state)) {
+    $mollom_state = array(
+      '#session_id' => NULL,
+      '#form_id' => $form_state['values']['form_id'],
+      '#require_analysis' => $element['#mode'] == MOLLOM_MODE_ANALYSIS,
+      '#require_captcha' => $element['#mode'] == MOLLOM_MODE_CAPTCHA,
+      '#passed_captcha' => FALSE,
+      '#user_session_id' => session_id(),
+    );
+  }
+
+  if (!empty($edit) || !empty($form_state['submitted'])) {
+    _mollom_debug("mollom_expand_element: submitted handler");
+
+    // First, perform captcha validation if required.
+    if (!empty($mollom_state['#require_captcha']) && empty($mollom_state['#passed_captcha'])) {
+      mollom_validate_captcha($mollom_state, $edit);
+    }
+
+    // Then, perform text analysis if required.
+    if (!empty($mollom_state['#require_analysis'])) {
+      mollom_validate_analysis($mollom_state, $form_state, $edit);
+    }
+  }
+
+  if (!empty($mollom_state['#require_captcha']) && empty($mollom_state['#passed_captcha'])) {
+    _mollom_debug('mollom_form_alter registered mollom_validate_captcha handler');
+    _mollom_insert_captcha($mollom_state, $element);
+
+    // This prevents the Drupal page cache from storing the page when we
+    // generated a captcha or when the user already passed the captcha.
+    // This is not required for text analysis, because the above code will
+    // simply generate a new session if the cached one doesn't match the user.
+    // TODO: find a better way to do this in D7.
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+  }
+  
+  if (!empty($mollom_state['#session_id'])) {
+    // We store the Mollom session only if something useful was done.
+    // We save it in two places: as an hidden form field and in the cache
+    // so that it persists form submission, and in $form_state so that it
+    // persists form rebuilds.
+    $element['session_id'] = array(
+      '#type' => 'hidden',
+      '#value' => $mollom_state['#session_id'],
+    );
+    cache_set($mollom_state['#session_id'], $mollom_state, 'cache_mollom', 60*30);
+
+    $form_state['mollom'] = $mollom_state;
+  }
+
+  return $element;
+}
+
+/**
+ * Clean the Mollom state as soon as the form has been submitted.
+ */
+function mollom_clean_state($form_id, $form_state) {
+  if (!empty($form_state['values']['mollom']['session_id'])) {
+    cache_clear_all($form_state['values']['mollom']['session_id'], 'cache_mollom');
+  }
+}
+
+/**
+ * Implementation of hook_theme.
+ */
+function mollom_theme() {
+  return array(
+    'mollom' => array(
+      'arguments' => array('element' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme function of the Mollom form element.
+ */
+function theme_mollom($element) {
+  return isset($element['#children']) ? $element['#children'] : '';
+}
+
+/**
+ * This form API validator function performs text analysis on a form.
+ */
+function mollom_validate_analysis(&$mollom_state, $form_state, &$edit) {
+
+  _mollom_debug("mollom_validate_analysis for '". $form_state['values']['form_id'] ."'");
+
+  $data = array();
+
+  $form_id = $form_state['values']['form_id'];
+
+  $pos = strpos($form_id, '_node_form');
+  if ($pos !== FALSE) {
+    // The node forms use dynamic form IDs so must use a special
+    // case for these.
+    $data = mollom_data_node_form($form_state['values']);
+  }
+  else {
+    $function = 'mollom_data_'. $form_id;
+    if (function_exists($function)) {
+      $data = $function($form_state['values']);
+    }
+  }
+
+  //watchdog('mollom', print_r($form_state['values'], TRUE));
+
+  $mollom = !empty($mollom_state['#session_id']) ? array('session_id' => $mollom_state['#session_id']) : array();
+
+  $result = mollom('mollom.checkContent', $data + $mollom);
+
+  if (isset($result['session_id']) && isset($result['spam'])) {
+    _mollom_debug('mollom_validate_analysis retrieved spam status '. $result['spam'] ." and session ID '". $result['session_id'] ."'");
+
+    // Store the session ID that Mollom returned and make sure that it persists across page requests:
+    $mollom_state['#session_id'] = $result['session_id'];
+
+    // Check the spam results and act accordingly:
+    if ($result['spam'] == MOLLOM_ANALYSIS_HAM) {
+      // Keep track of the response so we can use it later to save the data in the database:
+      $GLOBALS['mollom_response'] = $result;
+
+      watchdog('mollom', 'Ham: %message', array('%message' => $data['post_body']));
+    }
+    elseif ($result['spam'] == MOLLOM_ANALYSIS_SPAM) {
+      form_set_error('mollom', t('Your submission has triggered the spam filter and will not be accepted.'));
+      watchdog('mollom', 'Spam: %message', array('%message' => $data['post_body']));
+    }
+    else {
+      if (empty($mollom_state['#passed_captcha'])) {
+        // A captcha will be generated.
+        form_set_error('mollom', t("We're sorry, but the spam filter thinks your submission could be spam. Please complete the CAPTCHA."));
+        watchdog('mollom', 'Unsure: %message', array('%message' => $data['post_body']));
+        $mollom_state['#require_captcha'] = TRUE;
+      }
+    }
+  }
+  else {
+    return _mollom_fallback();
+  }
+}
+
+/**
+ * This form API validator function is called to check a CAPTCHA on a form.
+ */
+function mollom_validate_captcha(&$mollom_state, $edit) {
+
+  _mollom_debug("mollom_validate_captcha");
+
+  if (!empty($edit['captcha'])) {
+    // Check the CAPTCHA result:
+    $result = mollom('mollom.checkCaptcha', array(
+      'session_id' => $mollom_state['#session_id'],
+      'captcha_result' => $edit['captcha'],
+      'author_ip' => ip_address(),
+    ));
+
+    _mollom_debug('mollom_validate_captcha the captcha result was '. (int)$result);
+
+    if ($result == FALSE) {
+      watchdog('mollom', 'Incorrect CAPTCHA');
+      form_set_error('mollom][captcha', t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'));
+    }
+    else {
+      watchdog('mollom', 'Correct CAPTCHA');
+      $mollom_state['#passed_captcha'] = TRUE;
+    }
+  }
+  else {
+    form_set_error('mollom][captcha', t('The CAPTCHA field is required.'));
+  }
+}
+
+/**
+ * This function inserts a CAPTCHA into the form.  It is called
+ * during the construction of the form, just before the form
+ * is rendered.
+ */
+function _mollom_insert_captcha(&$mollom_state, &$element) {
+  _mollom_debug('_mollom_insert_captcha');
+
+  // Prepare the author's IP:
+  $data['author_ip'] = ip_address();
+
+  if (!empty($mollom_state['#session_id'])) {
+    $data['session_id'] = $mollom_state['#session_id'];
+  }
+
+  // Request a CAPTCHA -- we always default to an image CAPTCHA:
+  $response = mollom('mollom.getImageCaptcha', $data);
+
+  if (isset($response['session_id']) && isset($response['url'])) {
+    _mollom_debug("_mollom_insert_captcha retrieved URL '". $response['url'] ."' and session ID '". $response['session_id'] ."'");
+
+    // Include the JavaScript allowing the user to switch to an
+    // AUDIO captcha instead:
+    drupal_add_js(drupal_get_path('module', 'mollom') .'/mollom.js');
+
+    // Add the CAPTCHA to the form:
+    $element['captcha'] = array(
+      '#type' => 'textfield',
+      '#processed' => TRUE,
+      '#title' => t('Word verification'),
+      '#field_prefix' => '<div id="captcha"><a href="http://mollom.com"><img src="'. url($response['url']) .'" alt="Mollom CAPTCHA" /></a> (<a href="#" id="audio-captcha">'. t('play audio CAPTCHA') .'</a>)</div>',
+      '#required' => TRUE,
+      '#size' => 10,
+      // The previously entered value is useless because the captcha is regenerated at each form rebuild.
+      '#value' => '',
+      '#description' => t("Type the characters you see in the picture above; if you can't read them, submit the form and a new image will be generated."),
+    );
+
+    // Store the session ID that Mollom returned so that it persists across page requests:
+    $mollom_state['#session_id'] = $response['session_id'];
+  }
+}
+
+/**
+ * This function contacts Mollom to verify the configured key pair.
+ */
+function _mollom_verify_key() {
+  $status = mollom('mollom.verifyKey');
+
+  $message = t('We contacted the Mollom servers to verify your keys');
+
+  if ($status) {
+    drupal_set_message(t('@message: the Mollom services are operating correctly. We are now blocking spam.', array('@message' => $message)));
+  }
+  else {
+    drupal_set_message(t('@message: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@message' => $message, '@mollom-user' => 'http://mollom.com/user')), 'error');
+  }
+}
+
+/**
+ * This function refreshes the list of servers that can be used to contact Mollom.
+ */
+function _mollom_retrieve_server_list() {
+  // Start from a hard coded list of servers:
+  $servers = array('http://xmlrpc1.mollom.com', 'http://xmlrpc2.mollom.com', 'http://xmlrpc3.mollom.com');
+
+  // Use the list of servers to retrieve a list of servers from mollom.com:
+  foreach ($servers as $server) {
+    $result = xmlrpc($server .'/'. MOLLOM_API_VERSION, 'mollom.getServerList', _mollom_authentication());
+    if (!xmlrpc_error()) {
+      return $result;
+    }
+    else {
+      watchdog('mollom', 'Error @errno: %server - %message - mollom.getServerList', array('@errno' => xmlrpc_errno(), '%server' => $server, '%message' => xmlrpc_error_msg()), WATCHDOG_ERROR);
+    }
+  }
+
+  return array();
+}
+
+/**
+ * Call a remote procedure at the Mollom server.  This function
+ * automatically adds the information required to authenticate against
+ * Mollom.
+ */
+function mollom($method, $data = array()) {
+
+  // Initialize refresh variable:
+  $refresh = FALSE;
+ 
+  // Retrieve the list of Mollom servers from the database:
+  $servers = variable_get('mollom_servers', NULL);
+
+  if ($servers == NULL) {
+    // Retrieve a new list of servers:
+    $servers = _mollom_retrieve_server_list();
+
+    // Store the list of servers in the database:
+    variable_set('mollom_servers', $servers);
+  }
+
+  if (is_array($servers)) {
+    // Send the request to the first server; if that fails, try the other servers in the list:
+
+    reset($servers);
+    while ($server = current($servers)) {
+      $result = xmlrpc($server .'/'. MOLLOM_API_VERSION, $method, $data + _mollom_authentication());
+
+      // Debug output:
+      if (isset($data['session_id'])) {
+        _mollom_debug("called $method at server $server with session ID '". $data['session_id'] ."'");
+      }
+      else {
+        _mollom_debug("called $method at server $server with no session ID");
+      }
+
+      if ($result === FALSE && ($error = xmlrpc_error())) {
+
+        if ($error->code == MOLLOM_REFRESH) {
+          if (!$refresh) { // Safety pal to avoid endless loops.
+            // Retrieve a list of valid Mollom servers from mollom.com:
+            $servers = _mollom_retrieve_server_list();
+
+            // Reset the list of servers so we start from the first server in the list:
+            reset($servers);
+
+            // Store the updated list of servers in the database:
+            variable_set('mollom_servers', $servers);
+
+            // Log this for debuging purposes:
+            watchdog('mollom', 'The list of available Mollom servers was refreshed: @servers.', array('@servers' => print_r($servers, TRUE)));
+
+            // Mark that we have refreshed the list:
+            $refresh = TRUE;
+          }
+        }
+        elseif ($error->code == MOLLOM_REDIRECT) {
+          // If this is a network error, we go to the next server in the list.
+          $next = next($servers); 
+          
+          // Do nothing, we automatically select the next server.
+          watchdog('mollom', 'The Mollom server %server asked to use the next Mollom server in the list: %next.', array('%server' => $server, '%next' => $next));
+        }
+        else {
+          watchdog('mollom', 'Error @errno from %server: %message - %method - <pre>@data</pre>', array('@errno' => $error->code, '%server' => $server, '%message' => $error->message, '%method' => $method, '@data' => print_r($data, TRUE)), WATCHDOG_ERROR);
+       
+          // If it is a 'clean' Mollom error we return instantly.
+
+          if ($error->code == MOLLOM_ERROR) {
+            return $result;
+          }
+
+          // If this is a network error, we go to the next server in the list.
+          next($servers); 
+        }
+      }
+      else {
+        return $result;
+      }
+    }
+  }
+
+  // If none of the servers worked, activate the fallback mechanism:
+  _mollom_fallback();
+
+  // If everything failed, we reset the server list to force Mollom to request a new list:
+  variable_del('mollom_servers');
+
+  // Report this error:
+  watchdog('mollom', 'No Mollom servers could be reached or all servers returned an error -- the server list was emptied.', NULL, WATCHDOG_ERROR);
+}
+
+/**
+ * This function generates an array with all information required to
+ * authenticate against Mollom.  To prevent forged requests where you are
+ * impersonated, each request is signed with a hash based on a private
+ * key and a timestamp.
+ *
+ * Both the client and the server share the secret key used to create
+ * the authentication hash.  They both hash a timestamp with the secret
+ * key, and if the hashes match, the authenticity of the message is
+ * validated.
+ *
+ * To avoid someone intercepting a (hash, timestamp)-pair and using it
+ * to impersonate a client, Mollom reject any request where the timestamp
+ * is more than 15 minutes off.
+ *
+ * Make sure your server's time is synchronized with the world clocks,
+ * and that you don't share your private key with anyone else.
+ */
+function _mollom_authentication() {
+
+  $public_key = variable_get('mollom_public_key', '');
+  $private_key = variable_get('mollom_private_key', '');
+
+  // Generate a timestamp according to the dateTime format (http://www.w3.org/TR/xmlschema-2/#dateTime):
+  $time = gmdate("Y-m-d\TH:i:s.\\0\\0\\0O", time());
+
+  // Generate a random number:
+  $nonce = md5(mt_rand());
+
+  // Calculate a HMAC-SHA1 according to RFC2104 (http://www.ietf.org/rfc/rfc2104.txt):
+  $hash = base64_encode(
+    pack('H*', sha1((str_pad($private_key, 64, chr(0x00)) ^ (str_repeat(chr(0x5c), 64))) .
+    pack('H*', sha1((str_pad($private_key, 64, chr(0x00)) ^ (str_repeat(chr(0x36), 64))) .
+    $time .':'. $nonce .':'. $private_key))))
+  );
+
+  // Store everything in an array.  Elsewhere in the code, we'll add the
+  // actual data before we pass it onto the XML-RPC library:
+  $data['public_key'] = $public_key;
+  $data['time'] = $time;
+  $data['hash'] = $hash;
+  $data['nonce'] = $nonce;
+
+  return $data;
+}
+
+/**
+ * This helper function is used by developers to debug the form API workflow in this module.
+ * Uncomment the function body to activate.
+ */
+function _mollom_debug($message) {
+  // print $message .'<br />';
+  // watchdog('mollom', $message);
+  error_log($message);
+}
