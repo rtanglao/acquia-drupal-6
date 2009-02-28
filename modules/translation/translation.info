@@ -7,7 +7,7 @@ version = VERSION
 core = 6.x
 
 ; Information added by Acquia.com packaging script
-version = "6.9"
+version = "6.10"
 project = "drupal"
 acquia = "1"
 

@@ -1,5 +1,5 @@
 <?php
-// $Id: acquia_agent_streams.inc,v 1.1 2008/12/30 16:51:45 pwolanin Exp $
+// $Id: acquia_agent_streams.inc,v 1.2 2009/01/20 18:24:28 pwolanin Exp $
 
 /**
  * @file
@@ -59,6 +59,25 @@ function _acquia_agent_xmlrpc() {
   return $message->params[0];
 }
 
+/**
+ * Builds a stream context based on a url and local .pem file if available.
+ */
+function acquia_agent_stream_context_create($url, $module = 'acquia_agent') {
+  $opts = array();
+  $uri = parse_url($url);
+  if ($uri['scheme'] == 'https') {
+    // Look for a local certificate to validate the server identity.
+    $pem_file = drupal_get_path('module', $module) .'/'. $uri['host'] . '.pem';
+    if (file_exists($pem_file)) {
+      $opts['ssl'] = array(
+        'verify_peer' => TRUE,
+        'cafile' => $pem_file,
+        'allow_self_signed' => FALSE, // doesn't mean anything in this case
+        'CN_match' => $uri['host']);
+    }
+  }
+  return stream_context_create($opts);
+}
 
 /**
  * Perform an HTTP request.  This function is copied and modified
@@ -106,7 +125,7 @@ function acquia_agent_http_request($context, $url, $headers = array(), $method =
         $fp = @fsockopen('ssl://'. $uri['host'], $port, $errno, $errstr, 20);
       }
       else {
-        $fp = stream_socket_client('ssl://'. $uri['host'] .':'. $port, $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $context);
+        $fp = @stream_socket_client('ssl://'. $uri['host'] .':'. $port, $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $context);
         if (!$fp && $errno == 0) {
           // An SSL error occurred.  I do not know of any way to get
           // an error code or message programmatically.  By not having
@@ -255,20 +274,7 @@ function acquia_agent_valid_response($data) {
  * This function should never be called directly - use acquia_agent_call().
  */
 function _acquia_agent_request($url, $method, $data) {
-  $opts = array();
-  $uri = parse_url($url);
-  if ($uri['scheme'] == 'https') {
-    // Look for a local certificate to validate the server identity.
-    $pem_file = drupal_get_path('module', 'acquia_agent') .'/'. $uri['host'] . '.pem';
-    if (file_exists($pem_file)) {
-      $opts['ssl'] = array(
-        'verify_peer' => TRUE,
-        'cafile' => $pem_file,
-        'allow_self_signed' => FALSE, // doesn't mean anything in this case
-        'CN_match' => $uri['host']);
-    }
-  }
-  $ctx = stream_context_create($opts);
+  $ctx = acquia_agent_stream_context_create($url);
   if (!$ctx) {
     // TODO: what's a meaningful fault code?
     xmlrpc_error(-1, t('SSL is not supported or setup failed'));

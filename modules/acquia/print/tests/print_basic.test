@@ -1,5 +1,5 @@
 <?php
-// $Id: print_basic.test,v 1.4.2.3 2008/08/21 22:03:40 jcnventura Exp $
+// $Id: print_basic.test,v 1.4.2.4 2008/10/14 22:45:41 jcnventura Exp $
 
 /**
  * @file
@@ -15,7 +15,7 @@ class PrintBasicTest extends DrupalWebTestCase {
   /**
    * Implementation of getInfo().
    */
-  public function getInfo() {
+  function getInfo() {
     return array(
       'name' => t('Printer, e-mail and PDF versions tests'),
       'description' => t('Unit tests for the print, print_mail and print_pdf modules.'),
@@ -26,7 +26,7 @@ class PrintBasicTest extends DrupalWebTestCase {
   /**
    * Implementation of setUp().
    */
-  public function setUp() {
+  function setUp() {
     parent::setUp();
 
     // User to set up print.
@@ -42,13 +42,13 @@ class PrintBasicTest extends DrupalWebTestCase {
   /**
    * Implementation of tearDown().
    */
-  public function tearDown() {
+  function tearDown() {
     $_GET['q'] = $this->getq;
 
     parent::tearDown();
   }
 
-  public function testPrintRewriteUrls() {
+  function testPrintRewriteUrls() {
     global $base_url, $base_root;
 
     //Must require it, since this function gets called via Drupal's dynamic loading

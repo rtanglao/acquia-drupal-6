@@ -1,5 +1,5 @@
 <?php
-// $Id: print.pages.inc,v 1.1.2.29 2008/09/10 08:13:05 jcnventura Exp $
+// $Id: print.pages.inc,v 1.1.2.41 2009/01/21 01:11:51 jcnventura Exp $
 
 /**
  * @file
@@ -9,6 +9,8 @@
  * functions necessary to generate a PF version of the original page
  * in HTML format.
  */
+
+$_print_urls = PRINT_URLS_DEFAULT;
 
 /**
  * Generate an HTML version of the printer-friendly page
@@ -20,11 +22,21 @@ function print_controller_html() {
   $args = func_get_args();
   // Remove the print/ prefix
   $path = implode('/', $args);
-  $cid = isset($_GET['comment']) ? $_GET['comment'] : NULL;
+  $cid = isset($_GET['comment']) ? (int)$_GET['comment'] : NULL;
 
-  $print = print_controller($path, $cid);
-  $node = $print['node'];
-  include_once(_print_get_template('html', $print['type']));
+  $print = print_controller($path, $cid, PRINT_HTML_FORMAT);
+  if ($print !== FALSE) {
+    $node = $print['node'];
+    include_once(_print_get_template(PRINT_HTML_FORMAT, $print['type']));
+
+    $nodepath = drupal_get_normal_path($node->path);
+    db_query("UPDATE {print_page_counter} SET totalcount = totalcount + 1, timestamp = %d WHERE path = '%s'", time(), $nodepath);
+    // If we affected 0 rows, this is the first time viewing the node.
+    if (!db_affected_rows()) {
+      // We must create a new row to store counters for the new node.
+      db_query("INSERT INTO {print_page_counter} (path, totalcount, timestamp) VALUES ('%s', 1, %d)", $nodepath, time());
+    }
+  }
 }
 
 /**
@@ -37,6 +49,8 @@ function print_controller_html() {
  *   path of the original page
  * @param $cid
  *   comment ID of the individual comment to be rendered
+ * @param $format
+ *   format of the page being generated
  * @param $teaser
  *   if set to TRUE, outputs only the node's teaser
  * @param $message
@@ -47,7 +61,17 @@ function print_controller_html() {
  * @see _print_generate_path()
  * @see _print_generate_book()
  */
-function print_controller($path, $cid, $teaser = FALSE, $message = NULL) {
+function print_controller($path, $cid = NULL, $format = PRINT_HTML_FORMAT, $teaser = FALSE, $message = NULL) {
+  if (empty($path)) {
+    // If no path was provided, let's try to generate a page for the referer
+    global $base_url;
+
+    $ref = referer_uri();
+    $path = preg_replace("!^$base_url/!", '', $ref);
+    if ($path === $ref) {
+      $path = '';
+    }
+  }
   if (!is_numeric($path)) {
     // Indirect call with print/alias
     // If there is a path alias with these arguments, generate a printer-friendly version for it
@@ -59,17 +83,17 @@ function print_controller($path, $cid, $teaser = FALSE, $message = NULL) {
   }
   $parts = explode('/', $path);
   if (is_numeric($parts[0])) {
-    $print = _print_generate_node($path, $cid, $teaser, $message);
+    $print = _print_generate_node($path, $cid, $format, $teaser, $message);
   }
   else {
     $ret = preg_match('!^book/export/html/(.*)!i', $path, $matches);
     if ($ret == 1) {
       // This is a book PF page link, handle trough the book handling functions
-      $print = _print_generate_book($matches[1], $teaser, $message);
+      $print = _print_generate_book($matches[1], $format, $teaser, $message);
     }
     else {
       // If no content node was found, handle the page printing with the 'printable' engine
-      $print = _print_generate_path($path, $teaser, $message);
+      $print = _print_generate_path($path, $format, $teaser, $message);
     }
   }
 
@@ -123,15 +147,12 @@ function _print_robots_meta_generator() {
  *   array with the fields to be used in the template
  */
 function _print_var_generator($node, $message = NULL, $cid = NULL) {
-  global $base_url, $language;
+  global $base_url, $language, $_print_urls;
 
   $path = empty($node->nid) ? $node->path : "node/$node->nid";
 
-  $themed = theme('print_text');
-
   // print module settings
   $print_css = variable_get('print_css', PRINT_CSS_DEFAULT);
-  $print_urls = variable_get('print_urls', PRINT_URLS_DEFAULT);
   $print_logo_options = variable_get('print_logo_options', PRINT_LOGO_OPTIONS_DEFAULT);
   $print_logo_url = variable_get('print_logo_url', PRINT_LOGO_URL_DEFAULT);
   $print_html_sendtoprinter = variable_get('print_html_sendtoprinter', PRINT_HTML_SENDTOPRINTER_DEFAULT);
@@ -178,7 +199,7 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
       $css_files[] = preg_replace($pattern, '', $user_css);
     }
     foreach ($css_files as $filename) {
-      $res = file_get_contents($filename, TRUE);
+      $res = file_exists($filename) ? file_get_contents($filename, TRUE) : FALSE;
       if ($res != FALSE) {
         $style .= $res;
       }
@@ -223,7 +244,8 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
 
   $published_site = variable_get('site_name', 0);
   if ($published_site) {
-    $published = (empty($themed['published'])) ? t('Published on %site_name', array('%site_name' => $published_site)) : ($themed['published'] .' '. $published_site);
+    $print_text_published = variable_get('print_text_published', t('Published on %site_name'));
+    $published = t($print_text_published, array('%site_name' => $published_site));
     $print['site_name'] = $published .' ('. l($base_url, $base_url) .')';
   }
   else {
@@ -238,14 +260,15 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
     else {
       $url = $base_url .'/'. (((bool)variable_get('clean_url', '0')) ? '' : '?q=') . $path;
     }
-    if ($cid) {
+    if (is_int($cid)) {
       $url .= '#comment-$cid';
     }
     $retrieved_date = format_date(time(), 'small');
-    $retrieved = (empty($themed['retrieved'])) ? t('retrieved on %date', array('%date' => $retrieved_date)) : ($themed['retrieved'] .' '. $retrieved_date);
+    $print_text_retrieved = variable_get('print_text_retrieved', t('retrieved on %date'));
+    $retrieved = t($print_text_retrieved, array('%date' => $retrieved_date));
     $print['printdate'] = $print_sourceurl_date ? " ($retrieved)" : '';
 
-    $source_url = (empty($themed['sourceURL'])) ? t('Source URL') : $themed['sourceURL'];
+    $source_url = variable_get('print_text_source_url', t('Source URL'));
     $print['source_url'] = '<strong>'. $source_url . $print['printdate'] .':</strong> '. l($url, $url);
   }
   else {
@@ -256,13 +279,13 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
     $node_type = $node->type;
 
     if (theme_get_setting("toggle_node_info_$node_type")) {
+      $print_text_by = variable_get('print_text_by', t('By %author'));
       $by_author = ($node->name ? $node->name : variable_get('anonymous', t('Anonymous')));
-      $by = (empty($themed['by'])) ? t('By %author', array('%author' => $by_author)) : ($themed['by'] .' '. $by_author);
-      $print['submitted'] = $by;
+      $print['submitted'] = t($print_text_by, array('%author' => $by_author));
 
+      $print_text_created = variable_get('print_text_created', t('Created %date'));
       $created_datetime = format_date($node->created, 'small');
-      $created = (empty($themed['created'])) ? t('Created %date', array('%date' => $created_datetime)) : ($themed['created'] .' '. $created_datetime);
-      $print['created'] = $created;
+      $print['created'] = t($print_text_created, array('%date' => $created_datetime));
     }
     else {
       $print['submitted'] = '';
@@ -289,7 +312,7 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
 
   // Display the collected links at the bottom of the page. Code once taken from Kjartan Mannes' project.module
   $print['pfp_links'] = '';
-  if (!empty($print_urls)) {
+  if (!empty($_print_urls)) {
     $urls = _print_friendly_urls();
     $max = count($urls);
     $pfp_links = '';
@@ -297,7 +320,7 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
       for ($i = 0; $i < $max; $i++) {
         $pfp_links .= '['. ($i + 1) .'] '. $urls[$i] ."<br />\n";
       }
-      $links = (empty($themed['links'])) ? t('Links') : $themed['links'];
+      $links = variable_get('print_text_links', t('Links'));
       $print['pfp_links'] = "<p><strong>$links:</strong><br />$pfp_links</p>";
     }
   }
@@ -327,10 +350,7 @@ function _print_var_generator($node, $message = NULL, $cid = NULL) {
  *   URL list
  */
 function _print_rewrite_urls($matches) {
-  global $base_url, $base_root;
-
-  // Get value of Printer-friendly URLs setting
-  $print_urls = variable_get('print_urls', PRINT_URLS_DEFAULT);
+  global $base_url, $base_root, $_print_urls;
 
   // first, split the html into the different tag attributes
   $pattern = '!\s*(\w+\s*=\s*"(?:\\\"|[^"])*")\s*|\s*(\w+\s*=\s*\'(?:\\\\\'|[^\'])*\')\s*|\s*(\w+\s*=\s*\w+)\s*|\s+!';
@@ -352,7 +372,7 @@ function _print_rewrite_urls($matches) {
       else {
         if ($url[0] == '#') {
           // URL is an anchor tag
-          if (!empty($print_urls)) {
+          if (!empty($_print_urls)) {
             $path = explode('/', $_GET['q']);
             unset($path[0]);
             $path = implode('/', $path);
@@ -388,7 +408,7 @@ function _print_rewrite_urls($matches) {
   $ret = '<'. $matches[1] .'>';
   if (count($matches) == 4) {
     $ret .= $matches[2] . $matches[3];
-    if ((!empty($print_urls)) && (isset($newurl))) {
+    if ((!empty($_print_urls)) && (isset($newurl))) {
       $ret .= ' <span class="print-footnote">['. _print_friendly_urls(trim(stripslashes($newurl))) .']</span>';
     }
   }
@@ -468,12 +488,46 @@ function _print_get_template($format = NULL, $type = NULL) {
 }
 
 /**
+ * Check URL list settings for this node
+ *
+ * @param node
+ *   node object
+ * @param $format
+ *   format of the page being generated
+ * @return
+ *   TRUE if URL list should be displayed, FALSE otherwise
+ */
+function _print_url_list_enabled($node, $format = PRINT_HTML_FORMAT) {
+  switch ($format) {
+    case PRINT_HTML_FORMAT:
+      $node_urllist = isset($node->print_display_urllist) ? $node->print_display_urllist : TRUE;
+      $fmt = '';
+      break;
+    case PRINT_MAIL_FORMAT:
+      $node_urllist = isset($node->print_mail_display_urllist) ? $node->print_mail_display_urllist : TRUE;
+      $fmt = $format .'_';
+      break;
+    case PRINT_PDF_FORMAT:
+      $node_urllist = isset($node->print_pdf_display_urllist) ? $node->print_pdf_display_urllist : TRUE;
+      $fmt = $format .'_';
+      break;
+  }
+  if (!isset($node_urllist)) $node_urllist = TRUE;
+
+  // Get value of Printer-friendly URLs setting
+  return (variable_get('print_urls', PRINT_URLS_DEFAULT) && ($node_urllist) &&
+          variable_get('print_'. $fmt .'display_urllist_'. $node->type, PRINT_TYPE_URLLIST_DEFAULT));
+}
+
+/**
  * Prepare a Printer-friendly-ready node body for content nodes
  *
  * @param $nid
  *   node ID of the node to be rendered into a printer-friendly page
  * @param $cid
  *   comment ID of the individual comment to be rendered
+ * @param $format
+ *   format of the page being generated
  * @param $teaser
  *   if set to TRUE, outputs only the node's teaser
  * @param $message
@@ -481,30 +535,32 @@ function _print_get_template($format = NULL, $type = NULL) {
  * @return
  *   filled array ready to be used in the template
  */
-function _print_generate_node($nid, $cid = NULL, $teaser = FALSE, $message = NULL) {
+function _print_generate_node($nid, $cid = NULL, $format = PRINT_HTML_FORMAT, $teaser = FALSE, $message = NULL) {
+  global $_print_urls;
+
   // We can take a node id
   $node = node_load(array('nid' => $nid));
-  if (!node_access('view', $node)) {
+  if (!$node) {
+    // Node not found
+    drupal_not_found();
+    return FALSE;
+  }
+  elseif (!node_access('view', $node)) {
     // Access is denied
-    return drupal_access_denied();
+    drupal_access_denied();
+    return FALSE;
   }
   drupal_set_title($node->title);
 
   //alert other modules that we are generating a printer-friendly page, so they can choose to show/hide info
   $node->printing = TRUE;
+
   // Turn off Pagination by the Paging module
   unset($node->pages);
   unset($node->page_count);
 
-  if ($teaser) {
-    unset($node->body);
-  }
-  else {
-    unset($node->teaser);
-  }
-  $node = (object)$node;
   if ($cid === NULL) {
-    // Adapted (simplified) version of node_view for Drupal 5.x
+    // Adapted (simplified) version of node_view
     //Render the node content
     $node = node_build_content($node, $teaser, TRUE);
     // Disable fivestar widget output
@@ -512,7 +568,20 @@ function _print_generate_node($nid, $cid = NULL, $teaser = FALSE, $message = NUL
     // Disable service links module output
     unset($node->content['service_links']);
 
-    $node->body = drupal_render($node->content);
+    $content = drupal_render($node->content);
+
+    // Disable the AdSense module ads
+    $content = preg_replace('!<div class=[\'"]adsense[\'"].*?</div>!sim', '', $content);
+
+    if ($teaser) {
+      $node->teaser = $content;
+      unset($node->body);
+    }
+    else {
+      $node->body = $content;
+      unset($node->teaser);
+    }
+
     //TODO the following was part of the fix for http://drupal.org/node/254863
     //check if it is reproducible and find the exact condition which
     //triggered it
@@ -528,13 +597,13 @@ function _print_generate_node($nid, $cid = NULL, $teaser = FALSE, $message = NUL
     //Remove the comment forms
     $comments = preg_replace('!<form.*?id="comment-.*?">.*?</form>!sim', '', $comments);
     //Remove the 'Post new comment' title
-    $comments = preg_replace('!<h2.*?>Post new comment</h2>!', '', $comments);
+    $comments = preg_replace('!<h2.*?>'. t('Post new comment') .'</h2>!', '', $comments);
     //Remove the comment title hyperlink
-    $comments = preg_replace('!(<h3.*?>)(<a.*?>)(.*?)</a>(</h3>)!', '$1$3$4', $comments);
+    $comments = preg_replace('!(<h3.*?>.*?)<a.*?>(.*?)</a>(.*?</h3>)!i', '$1$2$3', $comments);
     //Remove the comment author link
-    $pattern = '!(<span class="submitted">)(.*?)<a.*?>(.*?)</a>(</span>)!sim';
+    $pattern = '!(<(?:span|div) class="submitted">.*?)<a.*?>(.*?)</a>(.*?</(?:span|div)>)!sim';
     if (preg_match($pattern, $comments)) {
-      $comments = preg_replace($pattern , '$1$2$3$4', $comments);
+      $comments = preg_replace($pattern , '$1$2$3', $comments);
     }
     //Remove the comment links
     $comments = preg_replace('!\s*<ul class="links">.*?</ul>!sim', '', $comments);
@@ -545,7 +614,15 @@ function _print_generate_node($nid, $cid = NULL, $teaser = FALSE, $message = NUL
     $node->body .= $comments;
   }
 
-  node_invoke_nodeapi($node, 'alter', FALSE, TRUE);
+  node_invoke_nodeapi($node, 'alter', $teaser, TRUE);
+
+  if ($teaser) {
+    $node->body = $node->teaser;
+    unset($node->teaser);
+  }
+
+  //Check URL list settings
+  $_print_urls = _print_url_list_enabled($node, $format);
 
   // Convert the a href elements
   $pattern = '!<(a\s[^>]*?)>(.*?)(</a>)!is';
@@ -563,6 +640,8 @@ function _print_generate_node($nid, $cid = NULL, $teaser = FALSE, $message = NUL
  *
  * @param $path
  *   path of the node to be rendered into a printer-friendly page
+ * @param $format
+ *   format of the page being generated
  * @param $teaser
  *   if set to TRUE, outputs only the node's teaser
  * @param $message
@@ -570,7 +649,9 @@ function _print_generate_node($nid, $cid = NULL, $teaser = FALSE, $message = NUL
  * @return
  *   filled array ready to be used in the template
  */
-function _print_generate_path($path, $teaser = FALSE, $message = NULL) {
+function _print_generate_path($path, $format = PRINT_HTML_FORMAT, $teaser = FALSE, $message = NULL) {
+  global $_print_urls;
+
   $path = drupal_get_normal_path($path);
 
   menu_set_active_item($path);
@@ -582,22 +663,27 @@ function _print_generate_path($path, $teaser = FALSE, $message = NULL) {
 
   // It may happen that a drupal_not_found is called in the above call
   if (preg_match('/404 Not Found/', drupal_get_headers()) == 1) {
-    return;
+    return FALSE;
   }
 
   if (is_int($node->body)) {
     switch ($node->body) {
       case MENU_NOT_FOUND:
-        return drupal_not_found();
+        drupal_not_found();
+        return FALSE;
         break;
       case MENU_ACCESS_DENIED:
-        return drupal_access_denied();
+        drupal_access_denied();
+        return FALSE;
         break;
     }
   }
 
   // Delete any links area
   $node->body = preg_replace('!\s*<div class="links">.*?</div>!sim', '', $node->body);
+
+  //Check URL list settings
+  $_print_urls = _print_url_list_enabled($node, $format);
 
   // Convert the a href elements
   $pattern = '!<(a\s[^>]*?)>(.*?)(</a>)!is';
@@ -616,6 +702,8 @@ function _print_generate_path($path, $teaser = FALSE, $message = NULL) {
  *
  * @param $nid
  *   node ID of the node to be rendered into a printer-friendly page
+ * @param $format
+ *   format of the page being generated
  * @param $teaser
  *   if set to TRUE, outputs only the node's teaser
  * @param $message
@@ -623,15 +711,26 @@ function _print_generate_path($path, $teaser = FALSE, $message = NULL) {
  * @return
  *   filled array ready to be used in the template
  */
-function _print_generate_book($nid, $teaser = FALSE, $message = NULL) {
+function _print_generate_book($nid, $format = PRINT_HTML_FORMAT, $teaser = FALSE, $message = NULL) {
+  global $_print_urls;
+
   $node = node_load(array('nid' => $nid));
-  if (!node_access('view', $node) || (!user_access('access printer-friendly version'))) {
+  if (!$node) {
+    // Node not found
+    drupal_not_found();
+    return FALSE;
+  }
+  elseif (!node_access('view', $node) || (!user_access('access printer-friendly version'))) {
     // Access is denied
-    return drupal_access_denied();
+    drupal_access_denied();
+    return FALSE;
   }
 
   $tree = book_menu_subtree_data($node->book);
   $node->body = book_export_traverse($tree, 'book_node_export');
+
+  //Check URL list settings
+  $_print_urls = _print_url_list_enabled($node, $format);
 
   // Convert the a href elements
   $pattern = '!<(a\s[^>]*?)>(.*?)(</a>)!is';

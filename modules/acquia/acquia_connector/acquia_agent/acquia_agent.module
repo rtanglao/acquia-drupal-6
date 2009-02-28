@@ -1,5 +1,5 @@
 <?php
-// $Id: acquia_agent.module,v 1.2 2008/12/30 17:38:18 pwolanin Exp $
+// $Id: acquia_agent.module,v 1.6 2009/02/04 13:15:00 pwolanin Exp $
 
 /**
  * @file
@@ -99,10 +99,13 @@ function acquia_agent_check_subscription($params = array()) {
           break;
       }
     }
-    elseif (acquia_agent_valid_response($data) && isset($data['result']['body']['active'])) {
+    elseif (acquia_agent_valid_response($data)) {
       $subscription += $data['result']['body'];
       variable_set('acquia_subscription_data', $subscription);
-      // use: variable_get('acquia_subscription_data', array('active' => FALSE));
+      // use: acquia_agent_settings('acquia_subscription_data');
+    }
+    else {
+      watchdog('acquia agent', 'HMAC validation error: <pre>@data</pre>', array('@data' => print_r($data, TRUE)), WATCHDOG_ERROR);
     }
   }
   return $subscription;
@@ -287,7 +290,7 @@ function acquia_agent_translated_menu_link_alter(&$item, $map) {
     return;
   }
   if ($item['title'] == 'acquia_subscription_status') {
-    $subscription = variable_get('acquia_subscription_data', array('active' => FALSE));
+    $subscription = acquia_agent_settings('acquia_subscription_data');
     if (empty($subscription['timestamp']) || (time() - $subscription['timestamp'] > 60*60*24)) {
       $subscription = acquia_agent_check_subscription(array('no_heartbeat' => 1));
     }
@@ -357,7 +360,7 @@ function acquia_agent_call($method, $params, $identifier = NULL, $key = NULL, $a
   $path = isset($uri['path']) ? $uri['path'] : '';
   $acquia_network_address = $uri['host'] . $port . $path;
   // Add a scheme based on PHP's capacity.
-  if (defined('X509_PURPOSE_SSL_CLIENT') && !defined('ACQUIA_DEVELOPMENT_NOSSL')) {
+  if (in_array('ssl', stream_get_transports(), TRUE) && !defined('ACQUIA_DEVELOPMENT_NOSSL')) {
     // OpenSSL is available in PHP
     $acquia_network_address = 'https://'. $acquia_network_address;
   }
@@ -411,20 +414,20 @@ function acquia_agent_connection_error_message() {
 }
 
 /**
- * Helper function to check if an identifer and key exist
+ * Helper function to check if an identifer and key exist.
  */
 function acquia_agent_has_credentials() {
   return (bool)(variable_get('acquia_identifier', '') && variable_get('acquia_key', ''));
 }
 
 /**
- * Helper function to check if the site has an active subscription
+ * Helper function to check if the site has an active subscription.
  */
 function acquia_agent_subscription_is_active() {
   $active = FALSE;
   // Subscription cannot be active if we have no credentials.
-  if (variable_get('acquia_identifier', '') && variable_get('acquia_key', '')) {
-    $subscription = variable_get('acquia_subscription_data', array('active' => FALSE));
+  if (acquia_agent_has_credentials()) {
+    $subscription = acquia_agent_settings('acquia_subscription_data');
     $active = !empty($subscription['active']);
   }
   return $active;
@@ -440,7 +443,7 @@ function acquia_agent_settings($variable_name) {
     case 'acquia_key':
       return variable_get('acquia_key', '');
     case 'acquia_network_address':
-      return variable_get('acquia_network_address', 'acquia.com');
+      return variable_get('acquia_network_address', 'rpc.acquia.com');
     case 'acquia_subscription_data':
       return variable_get('acquia_subscription_data', array('active' => FALSE));
   }
@@ -490,3 +493,4 @@ function acquia_agent_load_versions() {
   // Include version number information.
   include_once 'acquia_agent_drupal_version.inc';
 }
+

@@ -102,12 +102,34 @@ function filefield_field_insert($node, $field, &$items, $teaser, $page) {
 }
 
 function filefield_field_update($node, $field, &$items, $teaser, $page) {
+
+  // Accumulator to gather current fid to compare with the original node
+  // for deleting replaced files.
+  $curfids = array();
   foreach ($items as $delta => $item) {
     $items[$delta] = field_file_save($node, $item);
     // Remove items from the array if they have been deleted.
     if (empty($items[$delta])) unset($items[$delta]);
+    $curfids[] = $item['fid'];
   }
   $items = array_values($items); // compact deltas
+
+
+  // if this is a new node... there are no
+  // old items to worry about.
+  if ($node->is_new) {
+    return;
+  } 
+
+  // try to delete items from original node 
+  $orig = node_load($node->nid); 
+  // if there are, figure out which ones must go.
+  foreach($orig->$field['field_name'] as $oitem) {
+    if (!in_array($oitem['fid'], $curfids))  {
+      field_file_delete($oitem); 
+    }
+  }
+  
 }
 
 function filefield_field_delete_revision($node, $field, &$items, $teaser, $page) {
@@ -138,6 +160,10 @@ function filefield_field_sanitize($node, $field, &$items, $teaser, $page) {
     // Load the complete file if a filepath is not available.
     if (!empty($item['fid']) && empty($item['filepath'])) {
       $items[$delta] = array_merge($item, field_file_load($item['fid']));
+    }
+    // Extract data array from serialized string.
+    if (is_string($item['data'])){
+      $items[$delta]['data'] = unserialize($item['data']);
     }
     // Add nid so formatters can create a link to the node.
     $items[$delta]['nid'] = $node->nid;

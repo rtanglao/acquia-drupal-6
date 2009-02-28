@@ -1,12 +1,12 @@
 <?php
-// $Id: index.php,v 1.2.2.4 2008/09/10 08:13:05 jcnventura Exp $
+// $Id: index.php,v 1.2.2.5 2008/09/25 22:11:55 jcnventura Exp $
 
 /**
  * @file
  * Homepage of the API reference
  */
 
-/** @mainpage Printer, e-mail and PDF versions HEAD
+/** @mainpage Printer, e-mail and PDF versions
  * Welcome to the module developer's documentation. The interesting functions for
  * themers are those that start with 'theme_'.
  *

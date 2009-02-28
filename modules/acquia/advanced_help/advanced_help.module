@@ -75,6 +75,15 @@ function advanced_help_menu() {
 }
 
 /**
+* Inplementation of hook_menu_alter().
+**/
+function advanced_help_menu_alter(&$callbacks) {
+  // We need to fix the menu item provided by search module to restrict access.
+  $callbacks['search/advanced_help/%menu_tail']['access callback'] = 'user_access';
+  $callbacks['search/advanced_help/%menu_tail']['access arguments'] = array('view advanced help index');
+}
+
+/**
  * Implementation of hook_theme().
  */
 function advanced_help_theme() {
@@ -164,6 +173,7 @@ function advanced_help_search_view() {
  */
 function advanced_help_index_page($module = '') {
   $topics = advanced_help_get_topics();
+  $settings = advanced_help_get_settings();
 
   // Print a search widget.
   $output = '';
@@ -201,7 +211,7 @@ function advanced_help_index_page($module = '') {
 
     $items = array();
     foreach ($modules as $module => $module_name) {
-      if (!empty($topics[$module])) {
+      if (!empty($topics[$module]) && empty($settings[$module]['hide'])) {
         if (isset($settings[$module]['index name'])) {
           $name = $settings[$module]['index name'];
         }
@@ -270,7 +280,7 @@ function advanced_help_get_topic_hierarchy(&$topics) {
         $parent = '';
       }
       else if (strpos($info['parent'], '%')) {
-        list($parent, $parent_module) = explode($info['parent'], '%');
+        list($parent_module, $parent) = explode('%', $info['parent']);
         if (empty($topics[$parent_module][$parent])) {
           // If it doesn't exist, top level.
           $parent = '';

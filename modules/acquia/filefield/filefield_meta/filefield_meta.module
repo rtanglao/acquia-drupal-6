@@ -1,5 +1,5 @@
 <?php
-// $Id: filefield_meta.module,v 1.7 2009/01/13 04:17:46 drewish Exp $
+// $Id: filefield_meta.module,v 1.8 2009/02/04 10:19:38 dopry Exp $
 /**
  * @file
  * FileField Meta: Add Video Support to File Field.
@@ -15,6 +15,17 @@ function filefield_meta_theme() {
     ),
   );
 }
+
+/**
+ * Implementation of hook_cron(). 
+ */
+function filefield_meta_cron() {
+  $result = db_query('SELECT fm.fid FROM {filefield_meta} fm LEFT JOIN {files} f ON fm.fid=f.fid WHERE f.fid IS NULL');
+  while ($file = db_fetch_object($result)) {
+    db_query('DELETE FROM {filefield_meta} WHERE fid = %d', $file->fid);
+  }
+}
+
 
 /**
  * Implementation of filefield's hook_file_insert().
@@ -73,3 +84,4 @@ function theme_filefield_meta_duration($duration) {
   }
   return intval($minutes).':'.str_pad($seconds, 2, 0, STR_PAD_LEFT);
 }
+

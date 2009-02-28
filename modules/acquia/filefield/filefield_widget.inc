@@ -1,5 +1,5 @@
 <?php
-// $Id: filefield_widget.inc,v 1.47 2009/01/10 23:54:55 dopry Exp $
+// $Id: filefield_widget.inc,v 1.49 2009/01/31 17:51:12 dopry Exp $
 /**
  * @file
  * FileField: Defines a CCK file field type.
@@ -253,7 +253,7 @@ function filefield_widget_process($element, $edit, &$form_state, $form) {
   }
 
   $element['#attributes']['id'] = $element['#id'] .'-ahah-wrapper';
-  $element['#attributes']['class'] .= ' filefield-ahah-wrapper';
+  $element['#attributes']['class'] = (isset($element['#attributes']['class']) ? $element['#attributes']['class'] : '') .' filefield-ahah-wrapper';
   $element['#prefix'] = '<div '. drupal_attributes($element['#attributes']) .'>';
   $element['#suffix'] = '</div>';
   $element['upload_btn'] = array(

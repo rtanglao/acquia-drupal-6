@@ -88,10 +88,6 @@ The following themeable functions are defined:
       Returns an array of formatted attributes for the Printer-friendly
       link.
 
-  * theme_print_text()
-    Returns an array of costumized text strings used in the printer-friendly
-    page.
-
   * print_pdf_dompdf_footer($html)
     Format the dompdf footer contents
 
@@ -121,4 +117,4 @@ ACKNOWLEDGMENTS
 The print, pdf and mail icons are copyright Plone Foundation. Thanks for
 letting me use them!
 
-// $Id: README.txt,v 1.7.2.7 2008/09/11 09:18:14 jcnventura Exp $
+// $Id: README.txt,v 1.7.2.8 2008/12/02 22:41:37 jcnventura Exp $

@@ -4,8 +4,10 @@ description = Allow advanced help and documentation.
 core = 6.x
 
 ; Information added by Acquia.com packaging script
-version = "6.x-1.1"
 core = "6.x"
 project = "advanced_help"
+version = "6.x-1.1-acquiadev-1"
+description = "Allow advanced help and documentation. Acquia version 6.x-1.1-acquiadev-1 (Feb. 13, 2009) patched to enable correct functioning with CCK's help. See the  <a href="http://acquia.com/release-notes/1.2.2-drupal-6.9-core">release notes</a>."
+datestamp = "1234567890"
 acquia = "1"
 

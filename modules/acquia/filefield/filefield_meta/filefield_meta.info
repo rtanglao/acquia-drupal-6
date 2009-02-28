@@ -8,7 +8,7 @@ core = 6.x
 php = 5.2
 
 ; Information added by Acquia.com packaging script
-version = "6.x-3.0-alpha6"
+version = "6.x-3.0-alpha7"
 core = "6.x"
 project = "filefield"
 acquia = "1"
