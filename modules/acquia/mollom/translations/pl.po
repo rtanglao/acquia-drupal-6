@@ -1,0 +1,323 @@
+# $Id: pl.po,v 1.1.2.1 2008/12/02 08:09:50 kuling Exp $
+#
+# Polski / Polish translation of Drupal (general)
+#
+# Tomasz Kulig <tomasz.kulig _at| kuling.pl>, 2008\n"
+#
+# Generated from files:
+#  mollom.module,v 1.2.2.32 2008/11/03 16:38:37 dries
+#  mollom.install,v 1.2.2.4 2008/10/16 11:10:52 dries
+#  mollom.info,v 1.1.2.3 2008/04/01 14:16:25 dries
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"POT-Creation-Date: 2008-11-26 06:10-0600\n"
+"PO-Revision-Date: 2008-11-26 15:36+0100\n"
+"Last-Translator: Tomasz Kulig <tomasz.kulig _at| kuling.pl>\n"
+"Language-Team: Polski / Polish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=((n==1)?(0):(((((n%10)>=2)&&((n%10)<=4))&&(((n%100)<10)||((n%100)>=20)))?(1):2));\n"
+
+#: mollom.module:32
+msgid "Allowing users to react, participate and contribute while still keeping your site's content under control can be a huge challenge. Mollom is a web service that helps you identify content quality and, more importantly, helps you stop spam. When content moderation becomes easier, you have more time and energy to interact with your web community. More information about Mollom is available on the <a href=\"@mollom-website\">Mollom website</a> or in the <a href=\"@mollom-faq\">Mollom FAQ</a>."
+msgstr "Zezwolenie użytkownikom na branie udziału w tworzeniu treści i wnoszenie wkładu do twojej strony przy jednoczesnym kontrolowaniu jej zawartości jest nie lada wyzwaniem.  Mollom jest serwisem sieciowym, którego zadaniem jest pomoc w rozpoznawaniu jakość treści oraz (co ważniejsze) pomocy przy zatrzymywaniu spam. Ponieważ moderowanie treści stanie się łatwiejsze, zyskasz więcej czasu oraz energii na współdziałanie z twoją sieciową społecznością. Więcej informacji na temat Mollom możesz znaleźć na <a href=\"@mollom-website\">stronie Mollom</a> lub wewnątrz <a href=\"@mollom-faq\">Mollom FAQ</a>."
+
+#: mollom.module:47
+msgid "mark as abuse"
+msgstr "oznacz jako nadużycie"
+
+#: mollom.module:56
+msgid "Delete post"
+msgstr "Skasuj treść"
+
+#: mollom.module:129
+msgid "use image CAPTCHA"
+msgstr "użyj obrazkowej wersji CAPTCHA"
+
+#: mollom.module:138;993
+msgid "play audio CAPTCHA"
+msgstr "odtwórz plik dźwiękowy CAPTCHA"
+
+#: mollom.module:171
+msgid "Optionally report this to Mollom"
+msgstr "Opcjonalnie zgłoś to do Mollom"
+
+#: mollom.module:173
+msgid "Don't send feedback to Mollom"
+msgstr "Nie wysyłaj opinii zwrotnej do Mollom"
+
+#: mollom.module:174
+msgid "Report as spam or unsolicited advertising"
+msgstr "Zgłoś jako spam lub niechcianą reklamę"
+
+#: mollom.module:175
+msgid "Report as obscene, violent or profane content"
+msgstr "Zgłoś jako treść obsceniczną, agresywną lub profanującą"
+
+#: mollom.module:176
+msgid "Report as low-quality content or writing"
+msgstr "Zgłoś jako treść niskiej jakości lub słabej pisowni"
+
+#: mollom.module:177
+msgid "Report as unwanted, taunting or off-topic content"
+msgstr "Zgłoś jako treść niechcianą, szydzącą lub nie na temat"
+
+#: mollom.module:180
+msgid "Mollom is a web service that helps you moderate your site's content: see <a href=\"http://mollom.com\">http://mollom.com</a> for more information.  By sending feedback to Mollom, you teach Mollom what content you like and what content you dislike.  Like that, Mollom can do a better job helping you to moderate your site's content. If you want to report multiple posts at once, you can use Mollom's bulk operations on the content and comment administration pages."
+msgstr "Mollom jest sieciowym serwisem, który pozwoli ci na moderowane treści twojej strony. Więcej informacji możesz uzyskać na <a href=\"http://mollom.com\">http://mollom.com</a>. Poprzez wysyłanie informacji zwrotnej możesz uczyć Mollom jaką treść lubisz a jakiej nie akceptujesz. Właśnie w taki sposób Mollom może wykonywać lepszą pracę wspomagając cię w moderowaniu treści twojej strony. Jeśli chciałbyś zgłosić kilka wpisów na raz możesz użyć modułu Mollom do grupowych operacji na <a href=\"@content-admin\">stronie zarządzania zawartością</a> lub <a href=\"@comment-admin\">stronie zarządzania komentarzami</a>."
+
+#: mollom.module:193
+msgid "Are you sure you want to delete the comment and report it?"
+msgstr "Czy jesteś pewien, że chcesz skasować oraz zgłosić ten komentarz?"
+
+#: mollom.module:195;237;285
+msgid "This action cannot be undone."
+msgstr "Operacja jest nieodwracalna."
+
+#: mollom.module:196;238
+msgid "Delete"
+msgstr "Usuń"
+
+#: mollom.module:196;238;286
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: mollom.module:220
+msgid "The comment has been deleted."
+msgstr "Komentarz został usunięty."
+
+#: mollom.module:235
+msgid "Are you sure you want to delete %title and report it?"
+msgstr "Czy na pewno chcesz skasować oraz zgłosić %title?"
+
+#: mollom.module:271
+msgid "Report as inappropriate: @link"
+msgstr "Zgłoś jako nieodpowiedni: @link"
+
+#: mollom.module:283
+msgid "Are you sure you want to report the e-mail message as inappropriate?"
+msgstr "Czy na pewno chcesz zgłosić tą wiadomość e-mail jako nieodpowiednią?"
+
+#: mollom.module:286
+msgid "Report as inappropriate"
+msgstr "Zgłoś jako nieodpowiedni."
+
+#: mollom.module:295
+msgid "The e-mail has been reported as inappropriate."
+msgstr "Wiadomość e-mail została zgłoszona jako nieodpowiednia."
+
+#: mollom.module:368;377
+msgid "Report to Mollom as spam and unpublish"
+msgstr "Zgloś do Mollom jako spam i wstrzymaj publikację"
+
+#: mollom.module:369;378
+msgid "Report to Mollom as spam and delete"
+msgstr "Zgłoś do Mollom jako spam a następnie usuń"
+
+#: mollom.module:414
+msgid "The selected comments have been reported as inappropriate and are deleted."
+msgstr "Zaznaczone komentarze zostały zgłoszone jako nieodpowiednie a następnie zostały usunięte."
+
+#: mollom.module:417
+msgid "The selected comments have been reported as inappropriate and are unpublished."
+msgstr "Zaznaczone komentarze zostały zgłoszone jako nieodpowiednie a następnie zostały wycofane z publikacji."
+
+#: mollom.module:449
+msgid "The selected posts have been reported as inappropriate and are deleted."
+msgstr "Zaznaczone wpisy zostały zgłoszone jako nieodpowiednie a następnie zostały usunięte."
+
+#: mollom.module:452
+msgid "The selected posts have been reported as inappropriate and are unpublished."
+msgstr "Zaznaczone wpisy zostały zgłoszone jako nieodpowiednie a następnie zostały wycofane z publikacji."
+
+#: mollom.module:645
+msgid "Site usage statistics"
+msgstr "Statystyki użycia dla strony"
+
+#: mollom.module:654
+msgid "Spam protection settings"
+msgstr "Ustawienia ochrony antyspamowej"
+
+#: mollom.module:656
+msgid "Mollom can be used to block all sorts of spam received by your website. Your Drupal site will send data you want checked for spam to the Mollom servers, which will reply with either 'spam' or 'ham' (not spam). If Mollom is not fully confident in its decision, it will ask the user to fill out a CAPTCHA.  On the rare occasion that Mollom asks the poster to fill out a CAPTCHA, Mollom assumes that all legitimate posters will take the extra time to fill out this CAPTCHA.  Using the CAPTCHA, Mollom avoids legitimate messages being incorrectly classified as spam and it eliminates the need to moderate messages that Mollom decided to block."
+msgstr "Mollom może zostać użyty do blokowania wszelkiego rodzaju spamu otrzymywanego przez twoją stronę. Twoja strona zarządzana przez Dupal będzie wysyłała do serwerów Mollom treść w celu identyfikacji jej typu. Serwery spróbują udzielić odpowiedzi czy treść jest 'spamem' czy też jest 'nie-spamem' (tak zwany 'ham'). W przypadku, gdy Mollom nie będzie całkowicie pewien swojej decyzji, użytkownik będzie musiał rozwiązać zadanie CAPTCHA. Przy takich rzadkich okazjach Mollom poprosi użytkownika wysyłającego treść o odgadnięcie CAPTCHA zakładając, że każdy uprawniony użytkownik poświęci odrobinę czasu na rozwiązanie takiego zadania. Użycie tego mechanizmu pozwala wyeliminować sytuację błędnej klasyfikacji 'wiarygodnej' treści jako spamu oraz pozwala na wyeliminowanie potrzeby moderowania treści, którą Mollom zdecydował się zablokować."
+
+#: mollom.module:657
+msgid ""
+"Administrators can inspect the <a href=\"@logs\">logs</a> to see what Mollom has blocked.\n"
+"If Mollom made a mistake and some spam slipped through, you can report it to Mollom when you delete the post or comment.  By doing so, Mollom learns how it can do a better job protecting your site.  If you want to report multiple posts at once, you can use Mollom's bulk operations on the <a href=\"@content-admin\">content administration page</a> or the <a href=\"@comment-admin\">comment administration page</a>."
+msgstr ""
+"Administratorzy mogą przeanalizować <a href=\"@logs\">logi</a> w celu uzyskania informacji na temat zablokowanych przez Mollom treści.\n"
+"Jeśli Mollom popełni błąd i jakaś treść będąca spamem mimo wszystko przedostanie się, wówczas możesz ją zgłoś do Mollom podczas kasowania wątku czy też komentarza. Właśnie w taki sposób możesz uczyć Mollom w jaki sposób może lepiej wykonywać zadanie ochrony twojej strony. Jeśli chciałbyś zgłosić kilka wpisów na raz możesz użyć modułu Mollom do grupowych operacji na <a href=\"@content-admin\">stronie zarządzania zawartością</a> lub <a href=\"@comment-admin\">stronie zarządzania komentarzami</a>."
+
+#: mollom.module:659
+msgid "To perform its service, Mollom processes, stores and compares the data submitted by your site's visitors as explained in our <a href=\"http://mollom.com/service-agreement-free-subscriptions\">Web Service Privacy Policy</a>. As the controller of the data being processed, it is your responsibility to inform your website's visitors, and to obtain appropriate consent from them to allow Mollom to process their data."
+msgstr "Aby wykonywać swoje zadanie Mollom analizuje, przechowuje oraz porównuje wysłane przez użytkowników twojej strony treści w sposób wyjaśniony w naszej <a href=\"http://mollom.com/service-agreement-free-subscriptions\">Web Service Privacy Policy (Polityce Prywatności Serwisu)</a>. Do twojej odpowiedzialności, jako osoby kontrolującej przepływ danych, należy poinformowanie o tym użytkowników twojej strony oraz uzyskanie od nich zgody na przetwarzanie przez Mollom wprowadzanych przez nich danych."
+
+#: mollom.module:668
+msgid "Protect @name"
+msgstr "Chroń @name"
+
+#: mollom.module:675
+msgid "Server settings"
+msgstr "Ustawienia serwera"
+
+#: mollom.module:681
+msgid "Fallback strategy"
+msgstr "Strategia awaryjna"
+
+#: mollom.module:684
+msgid "Block all submissions on the protected forms until the server problems are resolved"
+msgstr "Zablokuj wszystkie próby publikacji we wszystkich chronionych formularzach do momentu rozwiązania problemów serwera"
+
+#: mollom.module:685
+msgid "Leave all forms unprotected and accept all submissions"
+msgstr "Pozostaw wszystkie formularze niechronione oraz akceptuj wszystkie próby publikacji"
+
+#: mollom.module:687
+msgid "In the very unlikely event that the Mollom servers are down or otherwise unreachable, no text analysis can be performed and no CAPTCHAs can be generated. At that point, your Drupal site will use the configured fallback strategy. You can choose to blindly accept all submissions without spam checking, or you can choose to block all submissions until the server or connection problems are resolved."
+msgstr "W przypadku bardzo nieprawdopodobnego zdarzenia jakim jest niedziałanie serwerów Mollom lub w wypadku problemów z połączeniem żadna analiza tekstu lub wygenerowanie zadań CAPTCHA nie mogą zostać przeprowadzone. W takim przypadku twoja strona oparta na Drupal użyje 'Strategii awaryjnej'. Możesz wybrać ślepe akceptowanie każdej treści bez sprawdzania czy treść jest spamem lub zablokować każdą próbę publikacji do momentu kiedy problemy z serwerem lub połączeniem nie zostaną rozwiązane."
+
+#: mollom.module:693
+msgid "Mollom access keys"
+msgstr "Klucze dostępu do Mollom"
+
+#: mollom.module:694
+msgid "In order to use Mollom, you need a public and a private key. Visit <a href=\"http://mollom.com/user\">http://mollom.com/user</a> and create a user account to obtain a private and a public access key."
+msgstr "W celu użycia Mollom potrzebujesz klucza publicznego i prywatnego. Odwiedź stronę <a href=\"http://mollom.com/user\">http://mollom.com/user</a> oraz stwórz konto użytkownika aby otrzymać prywatny i publiczny klucz dostępu."
+
+#: mollom.module:700
+msgid "Public key"
+msgstr "Klucz publiczny"
+
+#: mollom.module:702
+msgid "The public key is used to uniquely identify you."
+msgstr "Klucz publiczny służy do twojej jednoznacznej identyfikacji."
+
+#: mollom.module:707
+msgid "Private key"
+msgstr "Klucz prywatny"
+
+#: mollom.module:709
+msgid "The private key is used to prevent someone from hijacking your requests. It is like a password and should never be shared with anyone."
+msgstr "Klucz prywatny jest używany do ochrony przed próbami przejęcia twoich zapytań. Jest tożsamy z hasłem i dlatego nie powinien być nikomu wyjawiany."
+
+#: mollom.module:737
+msgid "The spam filter that is installed on this site is currently not available. Per the site's policy, we are unable to accept new submissions until that problem is resolved. Please try resubmitting the form in a couple minutes."
+msgstr "Filtr antyspamowy zainstalowany na tej stronie jest aktualnie niedostępny. Zgodnie z polityką strony żadne nowe treści nie będą akceptowane do momentu rozwiązania problemu. Proszę spróbować wysłać treść ponownie za kilka minut."
+
+#: mollom.module:786
+msgid "Your submission has triggered the installed spam filter and will not be accepted."
+msgstr "Próba wysłania treści spowodowała uruchomienie wbudowanego filtru antyspamowego. Treść nie została zaakceptowana."
+
+#: mollom.module:790
+msgid "We are sorry, but the spam filter on this site decided that your submission could be spam. Please fill in the CAPTCHA first."
+msgstr "Przepraszamy, ale jest podejrzenie, że próbujesz wysłać spam. Prosimy o rozwiązanie zadania CAPTCHA (odgadnięcie liter na obrazku lub odsłuchanie nagrania)."
+
+#: mollom.module:821
+msgid "The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again."
+msgstr "Wprowadzona odpowiedź na zadanie CAPTCHA jest błędna. Zostało wygenerowane nowe zadanie. Prosimy spróbować ponownie."
+
+#: mollom.module:835
+msgid "The CAPTCHA field is required."
+msgstr "Pole CAPTCHA jest wymagane."
+
+#: mollom.module:992
+msgid "Word verification"
+msgstr "Słowo weryfikujące"
+
+#: mollom.module:996
+msgid "Type the characters you see in the picture above; if you can't read them, submit the form and a new image will be generated."
+msgstr "Wpisz znaki, które widzisz na obrazku powyżej. Jeśli nie potrafisz ich odczytać wyślij formularz jeszcze raz. W takim przypadku zostanie wygenerowany nowy obrazek."
+
+#: mollom.module:1011
+msgid "We contacted the Mollom servers to verify your keys"
+msgstr "Skontaktowaliśmy się z serwerami Mollom w celu weryfikacji twoich kluczy"
+
+#: mollom.module:1014
+msgid "@message: the Mollom services are operating correctly. We are now blocking spam."
+msgstr "@message: usługi Mollom funkcjonują poprawnie. Blokujemy spam."
+
+#: mollom.module:1017
+msgid "@message: your keys do not exist or are no longer valid. Please visit the user settings page on the Mollom website again: <a href=\"@mollom-user\">@mollom-user</a>."
+msgstr "@message: twoje klucze nie istnieją lub straciły ważność. Odwiedź ponownie stronę ustawień użytkownika na stronie Mollom: <a href=\"@mollom-user\">@mollom-user</a>."
+
+#: mollom.module:740;783;787;791;820;831;1035;1094;1105;1108;1136
+msgid "mollom"
+msgstr "mollom"
+
+#: mollom.module:740
+msgid "All Mollom servers were unavailable: %servers, last error: @errno - %error_msg"
+msgstr "Wystkie serwery Mollom są niedostępne: %servers, ostatni błąd: @errno - %error_msg"
+
+#: mollom.module:783
+msgid "Ham: %message"
+msgstr "Nie-spam: %message"
+
+#: mollom.module:787
+msgid "Spam: %message"
+msgstr "Spam: %message"
+
+#: mollom.module:791
+msgid "Unsure: %message"
+msgstr "Niepewny: %message"
+
+#: mollom.module:820
+msgid "Incorrect CAPTCHA"
+msgstr "Niepoprawne rozwiązanie zadania CAPTCHA"
+
+#: mollom.module:831
+msgid "Correct CAPTCHA"
+msgstr "Poprawne rozwiązanie zadania CAPTCHA"
+
+#: mollom.module:1035
+msgid "Error @errno: %server - %message - mollom.getServerList"
+msgstr "Błąd @errno: %server - %message - mollom.getServerList"
+
+#: mollom.module:1094
+msgid "The list of available Mollom servers was refreshed: @servers."
+msgstr "Lista dostępnych serwerów Mollom została zaktualizowana: @servers."
+
+#: mollom.module:1105
+msgid "The Mollom server %server asked to use the next Mollom server in the list: %next."
+msgstr "Serwer Mollom %server poprosił o użycie następnego serwera na liście: %next."
+
+#: mollom.module:1108
+msgid "Error @errno from %server: %message - %method - <pre>@data</pre>"
+msgstr "Błąd @errno z %server: %message - %method - <pre>@data</pre>"
+
+#: mollom.module:1136
+msgid "No Mollom servers could be reached or all servers returned an error -- the server list was emptied."
+msgstr "Żaden z serwerów Mollom nie jest osiągalny lub wszystkie serwery zgłosiły błąd -- lista serwerów została wyczyszczona."
+
+#: mollom.install:14
+msgid "Tracks content spam statuses."
+msgstr "Śledzi statusy spamu treści."
+
+#: mollom.install:17
+msgid "Unique ID of the content."
+msgstr "Unikalne ID treści."
+
+#: mollom.install:24
+msgid "Content author's session ID."
+msgstr "Numer ID sesji autora treści."
+
+#: mollom.install:31
+msgid "A quality rating assigned to the content to tell whether or not it's spam."
+msgstr "Wskaźnik jakości przypisany do treści w celu informacji czy jest ona lub nie jest spamem."
+
+#: mollom.install:38
+msgid "The language(s) that the content might be written in."
+msgstr "Język(i) w których może być tworzona treść."
+
+#: mollom.info:0
+msgid "Mollom"
+msgstr "Mollom"
+
+#: mollom.info:0
+msgid "Protects against comment and contact form spam."
+msgstr "Przeciwdziała spamowi w formularzach komentarzy i kontaktu."
+
