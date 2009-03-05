@@ -1,0 +1,14 @@
+; $Id: apachesolr.info,v 1.1.2.1.2.6 2009/01/27 21:32:34 pwolanin Exp $
+name = Apache Solr framework
+description = Framework for searching with Solr
+dependencies [] = search
+package = Apache Solr
+core = "6.x"
+php = 5.2
+
+; Information added by Acquia.com packaging script
+version = "6.x-1.0-beta5"
+core = "6.x"
+project = "apachesolr"
+acquia = "1"
+

@@ -1,4 +1,4 @@
-# $Id: sv.po,v 1.1.2.1 2008/10/15 11:26:02 sun Exp $
+# $Id: sv.po,v 1.1.4.2 2008/10/15 11:27:37 sun Exp $
 #
 # Swedish translation of Drupal (img_assist.module)
 # Copyright 2007 Hannes Lilljequist <drupal@perrito.se>

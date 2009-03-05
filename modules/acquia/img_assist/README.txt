@@ -1,4 +1,4 @@
-/* $Id: README.txt,v 1.14.2.1 2008/04/15 20:12:18 sun Exp $ */
+/* $Id: README.txt,v 1.15.2.5 2009/01/18 04:04:19 sun Exp $ */
 
 -- SUMMARY --
 
@@ -11,16 +11,59 @@ Bug reports, feature suggestions and latest developments:
   http://drupal.org/project/issues/img_assist
 
 
+-- REQUIREMENTS --
+
+* Image module <http://drupal.org/project/image>
+
+* Views module <http://drupal.org/project/views>
+
+* Token module (optional) <http://drupal.org/project/token>
+
+* Wysiwyg API module (optional) <http://drupal.org/project/wysiwyg>
+
+
 -- INSTALLATION --
 
-* See INSTALL.txt in this directory.
+* Install as usual, see http://drupal.org/node/70151 for further information.
+
+
+-- CONFIGURATION --
+
+* Configure an input format and enable the filter 'Inline images' by visiting:
+
+  Administer >> Site configuration >> Input formats
+
+  If you want to enable Inline images for the input format 'Filtered HTML',
+  you additionally need to click the 'Configure' tab and add
+
+  <span> <img>
+
+  to the text field 'Allowed HTML tags'.
+
+* Configure user permissions in Administer >> User management >> Access control
+  >> Image assist.
+
+* Optionally go to the Views administration page and edit or clone Image
+  Assist's default 'img_assist_browser' view for the image browser. If you
+  intend to make major changes to the default view, you should click on 'Clone'
+  and modify the new (duplicated) view instead.  When you are done, enable this
+  view on Image Assist's settings page.
+
+* Optionally fine tune how Image Assist operates by navigating to:
+
+  Administer >> Site configuration >> Image assist
+
+  If Taxonomy module is enabled, you use a gallery module like Acidfree, and you
+  want your users to be able to easily choose images from their galleries, select
+  for example "Acidfree albums" as the vocabulary to use for Image assist.
+
+* If Wysiwyg API module is installed, you need to edit your Wysiwyg profiles
+  and enable the plugin for Image assist.
 
 
 -- USAGE --
 
-Read this after installing the module.
-
-* Using this module with TinyMCE:
+* Using this module with TinyMCE via Wysiwyg API module:
   1. Click the camera icon on the TinyMCE toolbar.
   2. Upload a new photo or choose an existing image.
   3. Set the properties for how you want the image to display.
@@ -40,7 +83,7 @@ Read this after installing the module.
 
   Users with the 'access img_assist' permission will see the 'add image' link
   or icon (configurable). Access to img_assist via the TinyMCE plugin is
-  controlled by the TinyMCE module.  
+  controlled by the Wysiwyg API module.  
 
   Users with the 'create images' permission will be able to upload images using
   img_assist. All users will be able to see and insert their own pictures, even
@@ -84,16 +127,6 @@ Read this after installing the module.
 
 * If you have a development site in progress, please test patches needing review.
   See http://drupal.org/patch/apply for further information.
-
-
--- FAQ --
-
-Q: After installing Image Assist plugin for TinyMCE, the plugin does not show up
-   in TinyMCE's list of "Buttons and Plugins"?
-
-A: Unfortunately, TinyMCE module comes with two folders named 'plugins'. Please
-   ensure that you have copied Image Assist's drupalimage plugin into the folder
-   [sites/all]/modules/tinymce/tinymce/jscripts/tiny_mce/plugins/
 
 
 -- CONTACT --

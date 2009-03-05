@@ -1,5 +1,5 @@
 <?php
-// $Id: webform_export.inc,v 1.1.4.4 2009/01/09 08:31:06 quicksketch Exp $
+// $Id: webform_export.inc,v 1.1.4.5 2009/02/14 01:03:37 quicksketch Exp $
 
 /**
  * @file
@@ -152,8 +152,8 @@ class webform_exporter_delimited extends webform_exporter {
 class webform_exporter_excel extends webform_exporter_delimited {
   var $delimiter;
 
-  function webform_exporter_delimited($options) {
-    $this->delimiter = '\t';
+  function webform_exporter_excel($options) {
+    $options['delimiter'] = '\t';
     parent::webform_exporter_delimited($options);
   }
 

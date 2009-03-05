@@ -1,0 +1,111 @@
+<?php
+// $Id: apachesolr_nodeaccess.module,v 1.1.2.6 2009/02/20 19:31:16 pwolanin Exp $
+
+/**
+ * Implementation of apachesolr_update_index
+ */
+function apachesolr_nodeaccess_apachesolr_update_index(&$document, $node) {
+  if (count(module_implements('node_grants'))) {
+    // Get node access grants.
+    $result = db_query('SELECT * from {node_access} WHERE nid = %d AND grant_view = 1', $node->nid);
+    while ($grant = db_fetch_object($result)) {
+      $key = 'nodeaccess_'. $grant->realm;
+      $document->setMultiValue($key, $grant->gid);
+    }
+  }
+}
+
+/**
+ * Creates a Solr query for a given user
+ *
+ * @param $account an account to get grants for and build a solr query
+ */
+function _apachesolr_nodeaccess_build_subquery($account) {
+  if (!user_access('administer nodes', $account) && count(module_implements('node_grants'))) {
+    // Get node access grants.
+    $grants = node_access_grants('view', $account);
+    if (empty($grants)) {
+      // If they can't see any content, we might as well not bother searching.
+      // Catch the exception to null out the query.
+      throw new Exception("This user cannot access any content!");
+    }
+    $node_access_query = apachesolr_drupal_query();
+    foreach ($grants as $realm => $gids) {
+      foreach ($gids as $gid) {
+        $node_access_query->add_field('nodeaccess_' . $realm, $gid);
+      }
+    }
+    return $node_access_query;
+  }
+  return NULL;
+}
+
+/**
+ * Implementation of hook_apachesolr_modify_query().
+ */
+function apachesolr_nodeaccess_apachesolr_modify_query(&$query, &$params) {
+  global $user;
+  try {
+    $subquery = _apachesolr_nodeaccess_build_subquery($user);
+  }
+  catch (Exception $e) {
+    $query = NULL;
+    watchdog("apachesolr_nodeaccess", 'User %name (UID:!uid) is not allowed to access any content', array('%name' => $user->name, '!uid' => $user->uid));
+    return;
+  }
+
+  if (!empty($subquery)) {
+    $query->add_subquery($subquery, 'OR');
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi().
+ *
+ * Listen to this hook to find out when a node is being saved.
+ */
+function apachesolr_nodeaccess_nodeapi(&$node, $op) {
+  switch ($op) {
+    case 'insert':
+    case 'update':
+      // hook_nodeapi() is called before hook_node_access_records() in node_save().
+      $node->apachesolr_nodeaccess_ignore = 1;
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_node_access_records().
+ *
+ * Listen to this hook to find out when a node needs to be re-indexed
+ * for its node access grants.
+ */
+function apachesolr_nodeaccess_node_access_records($node) {
+  // node_access_needs_rebuild() will usually be TRUE during a
+  // full rebuild.
+  if (empty($node->apachesolr_nodeaccess_ignore) && !node_access_needs_rebuild()) {
+    // Only one node is being changed - mark for re-indexing.
+    apachesolr_mark_node($node->nid);
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function apachesolr_nodeaccess_form_alter(&$form, $form_state, $form_id) {
+  if ($form_id == 'node_configure_rebuild_confirm') {
+    $form['#submit'][] = 'apachesolr_nodeaccess_rebuild_nodeaccess';
+  }
+}
+
+/**
+ * Force Solr to do a total re-index when node access rules change.
+ *
+ * This is unfortunate because not every node is going to be affected, but
+ * there is little we can do.
+ */
+function apachesolr_nodeaccess_rebuild_nodeaccess(&$form, $form_state) {
+  drupal_set_message(t('Solr search index will be rebuilt.'));
+  node_access_needs_rebuild(TRUE);
+  apachesolr_clear_last_index();
+}

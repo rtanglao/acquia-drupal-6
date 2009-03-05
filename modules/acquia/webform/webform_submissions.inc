@@ -1,5 +1,5 @@
 <?php
-// $Id: webform_submissions.inc,v 1.6.2.21 2009/01/10 02:45:23 quicksketch Exp $
+// $Id: webform_submissions.inc,v 1.6.2.23 2009/02/14 06:26:23 quicksketch Exp $
 
 /**
  * @file
@@ -146,7 +146,7 @@ function webform_get_submissions($nid, $header = NULL, $uid = NULL, $pager_count
            'LEFT JOIN {users} u ON u.uid = s.uid '.
            'WHERE sd.nid = %d';
 
-  if ($pager_count) {
+  if ($pager_count && !empty($sids)) {
     $query .= ' AND s.sid IN (%s)';
   }
 
@@ -165,7 +165,7 @@ function webform_get_submissions($nid, $header = NULL, $uid = NULL, $pager_count
     $query .= ' ORDER BY sid ASC, cid ASC, no ASC';
   }
 
-  $res = db_query($query, $nid, $sids, $uid);
+  $res = $pager_count ? db_query($query, $nid, $sids, $uid) : db_query($query, $nid, $uid);
   $submissions = array();
   $previous = array();
 

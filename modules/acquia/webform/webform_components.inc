@@ -1,5 +1,5 @@
 <?php
-// $Id: webform_components.inc,v 1.9.2.27 2009/01/11 08:08:24 quicksketch Exp $
+// $Id: webform_components.inc,v 1.9.2.28 2009/02/14 19:57:38 quicksketch Exp $
 
 /**
  * @file
@@ -431,7 +431,7 @@ function webform_component_edit_form_submit($form, &$form_state) {
   // Remove empty extra values.
   if (isset($form_state['values']['extra'])) {
     foreach ($form_state['values']['extra'] as $key => $value) {
-      if (empty($value)) {
+      if ($value  === '') {
         unset($form_state['values']['extra'][$key]);
       }
     }
@@ -440,7 +440,7 @@ function webform_component_edit_form_submit($form, &$form_state) {
   // Remove empty attribute values.
   if (isset($form_state['values']['extra']['attributes'])) {
     foreach ($form_state['values']['extra']['attributes'] as $key => $value) {
-      if (empty($value)) {
+      if ($value === '') {
         unset($form_state['values']['extra']['attributes'][$key]);
       }
     }

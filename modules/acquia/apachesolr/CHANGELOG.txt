@@ -1,0 +1,95 @@
+// $Id: CHANGELOG.txt,v 1.1.2.37 2009/02/27 14:38:05 pwolanin Exp $
+
+Apache Solr integration x.x-x.x, xxxx-xx-xx
+------------------------------
+
+Apache Solr integration 6.x-1.x, xxxx-xx-xx
+------------------------------
+
+Apache Solr integration 6.x-1.0-xxxxx, xxxx-xx-xx
+------------------------------
+
+Apache Solr integration 6.x-1.0-beta5, 2009-02-27
+------------------------------
+#305370 by pwolanin, don't delete from apachesolr table if Solr query fails.
+#385348 by moshe weitzman, use key in sort links array.
+#385362 by pwolanin, Shorten hash from 32 chars to 12.
+#383804 by JacobSingh, fix query building that broke nodeaccess.
+
+Apache Solr integration 6.x-1.0-beta4, 2009-02-23
+------------------------------
+#380670 by pwolanin, only add a bq param for a node-type boost > 'Normal'.
+#379518 by pwolanin, correct mismatch in default boost between 
+        solrconfig.xml and apachesolr_search.
+#380594 by pwolanin, empty the spellcheck dictionary if the index is deleted.
+#380644 by JacobSingh, Backwards compatability for old sort fields. 
+#380538 by pwolanin, fix code to find vid for taxonomy facet blocks.
+
+Apache Solr integration 6.x-1.0-beta3, 2009-02-20
+------------------------------
+#378222 by janusman and pwolanin, add boost settings for "sticky" and "promote".
+#378566 by pwolanin, nodeaccess not correctly marking single nodes for re-indexing.
+#378270 by pwolanin, suppress MLT admin link when there is no block content.
+#378196 by pwolanin, remove PHP client from CVS per Drupal.org policy.
+#231200 by janusman and pwolanin, turn on mapping of accented to non-accented
+        ISO characters for indexing and search. 
+#377494 by pwolanin, Update text type in schema to new example.
+#376270 by pwolanin, also add option to bias on recent comments/changes.
+#337879 by pwolanin and blackdog, Store relative not absolute paths.
+#376255 by pwolanin, Index more node fields, use boolean fields.
+#376966 by JacobSingh and pwolanin, requesting the top terms from luke is very
+        expensive, so normally request 0, and only get them for smaller indexes.
+#375991 by pwolanin, build spellcheck index on optimize.
+#370707 by pwolanin, make sort field names consistent, make ignored multiValued.
+#375723 by pwolanin, prevent fatal error if available facet list changes.
+#373921 by JacobSingh, show pending docs on index page from autocommit.
+#371858 by pwolanin, re-fill the Luke cache after we empty it on cron.
+#372120 by pwolanin, create one MLT block by default on install of apachesolr_mlt.
+#370707 compact field names, create "order by" fields in schema.xml
+        by pwolanin and Damien Tournoud.
+#370796 avoid repeated looping/indexing in apachesolr_index_nodes() by Damien Tournoud.
+#369944 Add field aliases and further clean-up the query class, by pwolanin.
+#366959 make usage of solrsort consistent in Solr_Base_Query::solrsort by Damien Tournoud.
+#       Update errant watchdog calls that were using D5 signature by robertDouglass.
+#369780 Rearrange code for better organization and performance by robertDouglass.
+#365901 Fix bug where indexing might hang & improved API by adding a separate
+        hook for modules to indicate that a node is excluded, by pwolanin.
+#367361 Use the machine-readable name for disabled node types by pwolanin.
+#366957 Add a "configure" link to the more like this block by JacobSingh.
+#365901 Add a bias on node type (and node-type exclusion) by Damien Tournoud and pwolanin.
+
+Apache Solr integration 6.x-1.0-beta2, 2009-01-28 (changes since 6.x-1.0-alpha6 2009-Jan-08)
+------------------------------
+#365684 Get PHP library from new svn home by pwolanin
+#365620 clear stale data on hook_enable by pwolanin
+#365312 don't redirect after enabling filters by pwolanin
+#365245 invalid foreach when no facets available reported by Damien Tournoud
+#        don't let attachements be enabled since it seems be broken by pwolanin
+#363972 fix ApacheSolr to Apache Solr
+#363972 Text improvements for UI by horncologne and pwolanin
+#365063 fix module name in admin screen by pwolanin
+#365022 fatal error in MLT when no Solr server by pwolanin
+#364446 fix space problem and clean up query class by pwolanin
+#355525 fix mis-named variables, patch by pwolanin,  bug reported by flexer
+#339467 centralize/register facets blocks by paul.lovvik, JacobSingh and
+        pwolanin
+#362389 make the _image module work by pwolanin
+#364140 fix mlt schema bug, thanks to webrascal
+#364384 reorder selects to have bigger numbers at the top by pwolanin, suggested
+        by horncologne
+#350330 make sure to index dates as GMT, thanks to webrascal
+#363416 reindex without blowing away either the solr index or the core search index by pwolanin
+#360227 strip ctl chars() also on path, reported by flexer
+#348215 cleanup - simplify branching, numerically index array by pwolanin
+#348215 add missing js file with minor text chenges (js file by vladimir.dolgopolov)
+#359923 separate cron limit for apachesolr by pwolanin
+#       remove lang module - code was already added to apachesolr_search
+#292662 commit after we delete the index by pwolanin
+#356696 by pwolanin: copies the author's name to a string field for use in
+        multisite search or sorting by author.  Also snuck in non-compression on
+        the body for performance.
+#348215 by vladimir.dolgopolov: More link for additional facets.
+#292662 update README by pwolanin
+#344249 obey 32 char limit for block deltas by pwolanin
+#355479 fix PHP warning when request fails by pwolanin
+#355544 Add a ->clearCache(); in apachesolr_index_page(), by flexer and pwolanin

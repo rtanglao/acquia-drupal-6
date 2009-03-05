@@ -1,0 +1,12 @@
+; $Id: apachesolr_mlt.info,v 1.1.4.5 2009/01/27 21:32:35 pwolanin Exp $
+name = Apache Solr more like this
+description = Use Solr to make content recommendations
+dependencies[] = apachesolr
+package = Apache Solr
+core = 6.x
+; Information added by Acquia.com packaging script
+version = "6.x-1.0-beta5"
+core = "6.x"
+project = "apachesolr"
+acquia = "1"
+

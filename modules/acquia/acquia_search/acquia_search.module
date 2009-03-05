@@ -1,0 +1,289 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ *   Integration between Acquia Drupal and Acquia's hosted solr search service.
+ */
+
+/**
+ * Implementation of hook_enable().
+ */
+function acquia_search_enable() {
+  if (acquia_agent_subscription_is_active()) {
+    _acquia_search_set_variables();
+  }
+}
+
+/**
+ * Helper function - set apachesolr variables to Acquia values..
+ */
+function _acquia_search_set_variables() {
+  variable_set('apachesolr_host', variable_get('acquia_search_host', 'search.acquia.com'));
+  variable_set('apachesolr_port', variable_get('acquia_search_port', '80'));
+  variable_set('apachesolr_path', variable_get('acquia_search_path', '/solr/'. acquia_agent_settings('acquia_identifier')));
+  variable_set('apachesolr_service_class', array('acquia_search', 'Acquia_Search_Service.php', 'Acquia_Search_Service'));
+  if (!variable_get('apachesolr_failure', FALSE)) {
+    variable_set('apachesolr_failure', 'show_drupal_results');
+  }
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function acquia_search_disable() {
+  acquia_search_delete_variables();
+  // Disable all the associated search modules.
+  module_disable(array('apachesolr', 'apachesolr_search', 'apachesolr_mlt', 'apachesolr_nodeaccess', 'apachesolr_image'));
+}
+
+/**
+ * Helper function to clear variables we may have set.
+ */
+function acquia_search_delete_variables() {
+  variable_del('apachesolr_host');
+  variable_del('apachesolr_port');
+  variable_del('apachesolr_path');
+  variable_del('apachesolr_service_class');
+  variable_del('apachesolr_query_class');
+}
+
+/**
+ * Implementation of hook_menu_alter().
+ */
+function acquia_search_menu_alter(&$menu) {
+
+  if (isset($menu['search/node/%menu_tail'])) {
+    // Hide the node search tab.
+    $menu['search/node/%menu_tail']['type'] = MENU_CALLBACK;
+    unset($menu['search/node/%menu_tail']['title callback'], $menu['search/node/%menu_tail']['title arguments']);
+    $menu['search/node/%menu_tail']['title'] = 'Search';
+  }
+  if (isset($menu['search/apachesolr_search/%menu_tail'])) {
+    // Alter the solr search tab
+    $menu['search/apachesolr_search/%menu_tail']['weight'] = -10;
+    unset($menu['search/apachesolr_search/%menu_tail']['title callback'], $menu['search/apachesolr_search/%menu_tail']['title arguments']);
+    $menu['search/apachesolr_search/%menu_tail']['title'] = 'Content';
+  }
+  if (isset($menu['search'])) {
+    $menu['search']['page arguments'] = array('apachesolr_search');
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function acquia_search_form_alter(&$form, &$form_state, $form_id) {
+
+  switch ($form_id) {
+    case 'search_block_form':
+    case 'search_theme_form':
+      foreach ($form['#submit'] as $key => $name) {
+        if ($name == 'search_box_form_submit') {
+          unset($form['#submit'][$key]);
+        }
+      }
+      $form['#submit'][] = 'acquia_search_search_box_form_submit';
+      break;
+    case 'search_form':
+      foreach ($form['#submit'] as $key => $name) {
+        if ($name == 'search_form_submit') {
+          unset($form['#submit'][$key]);
+        }
+      }
+      $form['#submit'][] = 'acquia_search_search_form_submit';
+      break;
+    case 'apachesolr_settings':
+      // Don't alter the form if there is no subscription.
+      if (acquia_agent_subscription_is_active()) {
+        $form['apachesolr_host'] = array(
+          '#type' => 'item',
+          '#title' => t("Search is being provided by the Acquia Search network service"),
+          '#value' => variable_get('apachesolr_host', 'localhost'),
+        );
+        unset($form['apachesolr_port'], $form['apachesolr_path']);
+        $form['apachesolr_failure']['#title'] = t("If your site cannot connect to the Acquia Search network service");
+        $form['#submit'][] = 'acquia_search_settings_submit';
+      }
+      break;
+    case 'apachesolr_delete_index_form':
+      $form['markup']['#value'] = t('Acquia Search index');
+      break;
+    case 'acquia_agent_settings_form':
+      $form['buttons']['submit']['#submit'][] = 'acquia_search_settings_submit';
+      $form['buttons']['delete']['#submit'][] = 'acquia_search_settings_submit';
+      break;
+  }
+}
+
+/**
+ * Added submit function for acquia_agent_settings and apachesolr_settings forms.
+ */
+function acquia_search_settings_submit($form, &$form_state) {
+  if (acquia_agent_subscription_is_active()) {
+    _acquia_search_set_variables();
+  }
+  else {
+    acquia_search_delete_variables();
+  }
+}
+
+/**
+ * Process a search form submission.
+ */
+function acquia_search_search_form_submit($form, &$form_state) {
+  $keys = $form_state['values']['processed_keys'];
+  if ($keys == '') {
+    form_set_error('keys', t('Please enter some keywords.'));
+    // Fall through to the drupal_goto() call.
+  }
+
+  $type = $form_state['values']['module'] ? $form_state['values']['module'] : 'apachesolr_search';
+  $form_state['redirect'] = 'search/'. $type .'/'. $keys;
+  return;
+}
+
+/**
+ * Process a block search form submission.
+ */
+function acquia_search_search_box_form_submit($form, &$form_state) {
+  $form_id = $form['form_id']['#value'];
+  $form_state['redirect'] = 'search/apachesolr_search/'. trim($form_state['values'][$form_id]);
+}
+
+/**
+ * Modify a solr base url and construct a hmac authenticator cookie.
+ *
+ * @param $url
+ *  The solr url beng requested - passed by reference and may be altered.
+ * @param $string
+ *  A string - the data to be authenticated, or empty to just use the path
+ *  and query from the url to build the authenticator.
+ *
+ * @return
+ *  An array containing the string to be added as the content of the
+ *  Cookie header to the request and the nonce.
+ */
+function acquia_search_auth_cookie(&$url, $string = '') {
+  $uri = parse_url($url);
+
+  // Add a scheme - should always be https if available.
+  if (in_array('ssl', stream_get_transports(), TRUE) && !defined('ACQUIA_DEVELOPMENT_NOSSL')) {
+    $scheme = 'https://';
+    $port = '';
+  }
+  else {
+    $scheme = 'http://';
+    $port = (isset($uri['port']) && $uri['port'] != 80) ? ':'. $uri['port'] : '';
+  }
+  $path = isset($uri['path']) ? $uri['path'] : '/';
+  $query = isset($uri['query']) ? '?'. $uri['query'] : '';
+  $url = $scheme . $uri['host'] . $port . $path . $query;
+
+  $nonce = md5(acquia_agent_random_bytes(55));
+
+  if ($string) {
+    $auth_header = acquia_search_authenticator($string, $nonce);
+  }
+  else {
+    $auth_header = acquia_search_authenticator($path . $query, $nonce);
+  }
+  return array($auth_header, $nonce);
+}
+
+/**
+ * Derive a key for the solr hmac using the information shared with acquia.com.
+ */
+function _acquia_search_derived_key() {
+  static $derived_key;
+  if (empty($derived_key)) {
+    $key = acquia_agent_settings('acquia_key');
+    $subscription = acquia_agent_settings('acquia_subscription_data');
+    // We use the expiration date in key derivation since this is a shared
+    // value that we could change on the AN side if needed to force any
+    // or all clients to use a new derived key.  We also use a string
+    // ('solr') specific to the service, since we want each service using a
+    // derived key to have a separate one.
+    $salt = isset($subscription['derived_key_salt']) ? $subscription['derived_key_salt'] : '';
+    $derivation_string = acquia_agent_settings('acquia_identifier') . 'solr' . $salt;
+    $derived_key = _acquia_search_hmac($key, str_pad($derivation_string, 80, $derivation_string));
+  }
+  return $derived_key;
+}
+
+/**
+ * Creates an authenticator based on a data string and HMAC-SHA1.
+ */
+function acquia_search_authenticator($string, $nonce, $derived_key = NULL) {
+  if (empty($derived_key)) {
+    $derived_key = _acquia_search_derived_key();
+  }
+  $time = time();
+  return 'acquia_solr_time='. $time .'; acquia_solr_nonce='. $nonce .'; acquia_solr_hmac='. _acquia_search_hmac($derived_key, $time . $nonce . $string) .';';
+}
+
+/**
+ * Validate the authenticity of returned data using a nonce and HMAC-SHA1.
+ *
+ * @return
+ *  TRUE or FALSE.
+ */
+function acquia_search_valid_response($hmac, $nonce, $string, $derived_key = NULL) {
+  if (empty($derived_key)) {
+    $derived_key = _acquia_search_derived_key();
+  }
+  return $hmac == _acquia_search_hmac($derived_key, $nonce . $string);
+}
+
+/**
+ * Look in the headers and get the hmac_digest out
+ * @return string hmac_digest
+ *
+ */
+function acquia_search_extract_hmac($http_response_header) {
+  $reg = array();
+  if (is_array($http_response_header)) {
+    foreach ($http_response_header as $header) {
+      if (preg_match("/Pragma:.*hmac_digest=(.+);/i", $header, $reg)) {
+        return trim($reg[1]);
+      }
+    }
+  }
+  return '';
+}
+
+/**
+ * Calculates a HMAC-SHA1 of a data string.
+ *
+ * See RFC2104 (http://www.ietf.org/rfc/rfc2104.txt). Note, the result of this
+ * must be identical to using hash_hmac('sha1', $string, $key);  We don't use
+ * that function since PHP can be missing it if it was compiled with the
+ * --disable-hash switch. However, the hash extension is enabled by default
+ * as of PHP 5.1.2, so we should consider requiring it and using the built-in
+ * function since it is a little faster (~1.5x).
+ */
+function _acquia_search_hmac($key, $string) {
+  return sha1((str_pad($key, 64, chr(0x00)) ^ (str_repeat(chr(0x5c), 64))) . pack("H*", sha1((str_pad($key, 64, chr(0x00)) ^ (str_repeat(chr(0x36), 64))) . $string)));
+}
+
+/**
+ * Implementation of hook_update_status_alter().
+ *
+ * This function disables the reporting of apachesolr update notifications
+ * if the acquia_search module is enabled.  When the administrator updates
+ * the acquia_search module, the apachesolr module is also updated, so there
+ * is no need for both.
+ *
+ * @param $projects
+ *   Reference to an array of information about available updates to each
+ *   project installed on the system.
+ *
+ * @see update_calculate_project_data()
+ */
+function acquia_search_update_status_alter(&$projects) {
+  // If we are running Acquia Drupal, acquia_agent handles this.
+  if (!acquia_agent_has_update_service() && isset($projects['apachesolr'])) {
+    $projects['acquia_search']['includes']['apachesolr'] = $projects['apachesolr']['title'];
+    unset($projects['apachesolr']);
+  }
+}

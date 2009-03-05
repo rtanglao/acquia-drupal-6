@@ -1,5 +1,5 @@
 <?php
-// $Id: webform.module,v 1.124.2.85 2009/01/11 07:38:50 quicksketch Exp $
+// $Id: webform.module,v 1.124.2.94 2009/02/14 08:18:14 quicksketch Exp $
 
 /**
  * This module provides a simple way to create forms and questionnaires.
@@ -671,7 +671,7 @@ function webform_form(&$node, &$param) {
   $form['webform']['settings']['confirmation'] = array(
     '#type' => 'textarea',
     '#title' => t('Confirmation message or redirect URL'),
-    '#description' => t('Message to be shown upon successful submission or a path to a redirect page. Redirect pages must start with <em>http://</em> for external sites or <em>internal:</em> for an internal path. i.e. <em>http://www.example.com</em> or <em>internal:node/10</em>'),
+    '#description' => t('Message to be shown upon successful submission or a path to a redirect page. Preface message with <em>message:</em> for a simple message that does not require a page refresh. Redirect pages must start with <em>http://</em> for external sites or <em>internal:</em> for an internal path. i.e. <em>http://www.example.com</em> or <em>internal:node/10</em>'),
     '#default_value' => $node->webform['confirmation'],
     '#cols' => 40,
     '#rows' => 10,
@@ -689,6 +689,7 @@ function webform_form(&$node, &$param) {
     '#weight' => -3,
     '#parents' => array('webform'),
     '#description' => t('These permissions affect which roles can submit this webform. It does not prevent access to the webform page. If needing to prevent access to the webform page entirely, use a content access module such as <a href="http://drupal.org/project/taxonomy_access">Taxonomy Access</a> or <a href="http://drupal.org/project/node_privacy_byrole">Node Privacy by Role</a>.'),
+    '#access' => variable_get('webform_submission_access_control', 1),
   );
   $user_roles = user_roles();
   $form['webform']['role_control']['roles'] = array(
@@ -714,6 +715,7 @@ function webform_form(&$node, &$param) {
   $form['webform']['mail_settings']['email'] = array(
     '#type' => 'textfield',
     '#title' => t('E-mail to address'),
+    '#maxlength' => 255,
     '#default_value' => $node->webform['email'],
     '#description' => t('Form submissions will be e-mailed to this address. Leave blank for none. Multiple e-mail addresses may be separated by commas.'),
   );
@@ -1081,12 +1083,18 @@ function webform_view(&$node, $teaser = 0, $page = 0) {
   }
 
   // Check if the user's role can submit this webform.
-  $allowed_roles = array();
-  foreach ($node->webform['roles'] as $rid) {
-    $allowed_roles[$rid] = isset($user->roles[$rid]) ? TRUE : FALSE;
+  if (variable_get('webform_submission_access_control', 1)) {
+    $allowed_roles = array();
+    foreach ($node->webform['roles'] as $rid) {
+      $allowed_roles[$rid] = isset($user->roles[$rid]) ? TRUE : FALSE;
+    }
+    if (array_search(TRUE, $allowed_roles) === FALSE && $user->uid != 1) {
+      $enabled = FALSE;
+    }
   }
-  if (array_search(TRUE, $allowed_roles) === FALSE && $user->uid != 1) {
-    $enabled = FALSE;
+  else {
+    // If not using Webform submission access control, allow for all roles.
+    $allowed_roles = array_keys(user_roles());
   }
 
   // Check if the user can add another submission.
@@ -1177,7 +1185,7 @@ function theme_webform_view_messages($node, $teaser, $page, $submission_count, $
     }
     elseif (isset($allowed_roles[2])) {
       // The "authenticated user" role is allowed to submit and the user is currently logged-out.
-      $message = t('You must <a href="!login">login</a> or <a href="!register">register</a> to view this form.', array('!login' => url('user/login'), '!register' => url('user/register')));
+      $message = t('You must <a href="!login">login</a> or <a href="!register">register</a> to view this form.', array('!login' => url(('user/login'), array('query' => drupal_get_destination())), '!register' => url(('user/register'), array('query' => drupal_get_destination()))));
     }
     else {
       // The user must be some other role to submit.
@@ -1220,7 +1228,7 @@ function theme_webform_view_messages($node, $teaser, $page, $submission_count, $
 function webform_mail($key, &$message, $params) {
   $message['headers'] = array_merge($message['headers'], $params['headers']);
   $message['subject'] = $params['subject'];
-  $message['body'] = preg_split('/\r?\n/', $params['message']);
+  $message['body'][] = $params['message'];
 }
 
 /**
@@ -1313,6 +1321,17 @@ function webform_admin_settings() {
       '.'  => t('Period (.)'),
       ' '  => t('Space ( )'),
     ),
+  );
+
+  $form['advanced']['webform_submission_access_control']  = array(
+    '#type' => 'radios',
+    '#title' => t('Submission access control'),
+    '#options' => array(
+      '1' => t('Select the user roles that may submit each individual webform'),
+      '0' => t('Disable Webform submission access control'),
+    ),
+    '#default_value' => variable_get('webform_submission_access_control', 1),
+    '#description' => t('By default, the configuration form for each webform allows the administrator to choose which roles may submit the form. You may want to allow users to always submit the form if you are using a separate node access module to control access to webform nodes themselves.'),
   );
 
   $form['advanced']['webform_debug']  = array(
@@ -1493,6 +1512,11 @@ function webform_client_form($form_state, &$node, $submission, $enabled = FALSE,
           '#value'     => $page_count,
         );
 
+        $form['details']['page_count'] = array(
+          '#type'      => 'hidden',
+          '#value'     => $page_count,
+        );
+
         // Add the submit button(s).
         if ($page_num > 1) {
           $form['previous'] = array(
@@ -1644,8 +1668,8 @@ function webform_client_form_submit($form, &$form_state) {
   // Check for a multi-page form that is not yet complete.
   $submit_op = empty($node->webform['submit_text']) ? t('Submit') : $node->webform['submit_text'];
   if ($form_state['values']['op'] != $submit_op) {
-    // Perform post processing by components.
-    _webform_client_form_submit_process($node, $form_state['values']['submitted']);
+    // Checkboxes need post-processing to maintain their values.
+    _webform_client_form_submit_process($node, $form_state['values']['submitted'], array('select', 'grid'));
 
     // Store values from the current page in the form state storage.
     if (is_array($form_state['values']['submitted'])) {
@@ -1866,6 +1890,11 @@ function webform_client_form_submit($form, &$form_state) {
     $path = preg_replace('/^internal:/', '', $node->webform['confirmation']);
     $redirect = array(trim($path), 'sid='. $sid);
   }
+  elseif (preg_match('/^message:/', $node->webform['confirmation'])) {
+    $message = preg_replace('/^message:/', '', $node->webform['confirmation']);
+    drupal_set_message($message);
+    $redirect = NULL;
+  }
   else {
     $redirect = array('node/'. $node->nid .'/done', 'sid='. $sid);
   }
@@ -1874,19 +1903,28 @@ function webform_client_form_submit($form, &$form_state) {
 
 /**
  * Post processes the submission tree with any updates from components.
+ *
+ * @param $node
+ *   The full webform node.
+ * @param $form_values
+ *   The form values for the form.
+ * @param $types
+ *   Optional. Specific types to perform processing.
+ * @param $parent
+ *   Internal use. The current parent CID whose children are being processed.
  */
-function _webform_client_form_submit_process($node, &$form_values, $parent = 0) {
+function _webform_client_form_submit_process($node, &$form_values, $types = NULL, $parent = 0) {
   if (is_array($form_values)) {
     foreach ($form_values as $form_key => $value) {
       $cid = webform_get_cid($node, $form_key, $parent);
       if (is_array($value) && isset($node->webform['components'][$cid]['type']) && $node->webform['components'][$cid]['type'] == 'fieldset') {
-        _webform_client_form_submit_process($node, $form_values[$form_key], $cid);
+        _webform_client_form_submit_process($node, $form_values[$form_key], $types, $cid);
       }
 
       if (isset($node->webform['components'][$cid])) {
         $component = $node->webform['components'][$cid];
         $submit_function = '_webform_submit_'. $component['type'];
-        if (function_exists($submit_function)) {
+        if (function_exists($submit_function) && (!isset($types) || in_array($component['type'], $types))) {
           // Call the component process submission function.
           $submit_function($form_values[$component['form_key']], $component);
         }
@@ -1978,7 +2016,7 @@ function template_preprocess_webform_mail_message(&$vars) {
  * @param $indent
  *   The current amount of indentation being applied to printed components.
  */
-function theme_webform_mail_fields($cid, $value, $node, $indent = '') {
+function theme_webform_mail_fields($cid, $value, $node, $indent = "") {
   $component = $node->webform['components'][$cid];
 
   // Check if this component needs to be included in the email at all.
@@ -2081,14 +2119,12 @@ function _webform_filter_values($string, $node = NULL, $submission = NULL, $stri
   }
 
   // User replacements.
-  if ($user->uid) {
-    $find[] = '%username';
-    $find[] = '%useremail';
-    $replace[] = isset($user->name) ? $user->name : '';
-    $replace[] = isset($user->mail) ? $user->mail : '';
-    if (module_exists('profile')) {
-      profile_load_profile($user);
-    }
+  $find[] = '%username';
+  $find[] = '%useremail';
+  $replace[] = isset($user->name) ? $user->name : '';
+  $replace[] = isset($user->mail) ? $user->mail : '';
+  if ($user->uid && module_exists('profile')) {
+    profile_load_profile($user);
   }
 
   // Provide a list of candidates for token replacement.

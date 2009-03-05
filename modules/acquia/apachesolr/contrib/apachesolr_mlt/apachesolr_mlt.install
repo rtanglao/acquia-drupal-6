@@ -1,0 +1,51 @@
+<?php
+//$Id: apachesolr_mlt.install,v 1.1.4.4 2009/02/10 20:25:48 pwolanin Exp $
+
+function apachesolr_mlt_install() {
+  // Create tables.
+  $pass = drupal_install_schema('apachesolr_mlt');
+  if ($pass) {
+    drupal_set_message(t('Created the apachesolr_mlt table'));
+    drupal_load('module', 'apachesolr_mlt');
+    $block = array(
+      'name' => t('More like this'),
+      'num_results' => '5',
+      'mlt_fl' =>  array(
+        'title' => 'title',
+        'taxonomy_names' => 'taxonomy_names',
+      ),
+      'mlt_mintf' => '1',
+      'mlt_mindf' => '1',
+      'mlt_minwl' => '3',
+      'mlt_maxwl' => '15',
+      'mlt_maxqt' => '30',
+    );
+    apachesolr_mlt_save_block($block, NULL);
+  }
+}
+
+function apachesolr_mlt_schema() {
+  $schema['apachesolr_mlt'] = array(
+    'description' => t('Tracks custom content recommendation blocks.'),
+    'fields' => array(
+      'id' => array(
+        'description' => t('The primary identifier for a custom block.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'data' => array(
+        'description' => t('The serialized data for a block.'),
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  return $schema;
+}
+
+function apachesolr_mlt_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('apachesolr_mlt');
+}

@@ -1,5 +1,5 @@
 <?php
-// $Id: file.inc,v 1.4.2.28 2009/01/10 01:32:19 quicksketch Exp $
+// $Id: file.inc,v 1.4.2.32 2009/02/14 07:19:32 quicksketch Exp $
 
 /**
  * @file
@@ -202,7 +202,8 @@ function theme_webform_edit_file($form) {
       // Render the checkboxes in two rows.
       $checkcount = 0;
       $jsboxes = '';
-      foreach ($checkboxes as $key => $checkbox) {
+      foreach (element_children($checkboxes) as $key) {
+        $checkbox = $checkboxes[$key];
         if ($checkbox['#type'] == 'checkbox') {
           $checkcount++;
           $jsboxes .= "'". $checkbox['#return_value'] ."',";
@@ -284,6 +285,7 @@ function _webform_render_file($component) {
     ),
     '#webform_component' => $component,
   );
+  $form_item['#weight'] = $component['weight'];
   $form_item['new'] = array(
     '#type' => 'hidden',
     '#weight' => $component['weight'],
@@ -292,7 +294,7 @@ function _webform_render_file($component) {
   );
   // Change the 'width' option to the correct 'size' option.
   if ($component['extra']['width'] > 0) {
-    $form_item['#size'] = $component['extra']['width'];
+    $form_item[$component['form_key']]['#size'] = $component['extra']['width'];
   }
 
   return $form_item;
@@ -317,6 +319,7 @@ function _webform_validate_file($form_element, &$form_state) {
 
   // Build a human readable list of extensions:
   $extensions = $component['extra']['filtering']['types'];
+  $extension_list = '';
   if (count($extensions) > 1) {
     for ($n = 0; $n < count($extensions) - 1; $n++) {
       $extension_list .= $extensions[$n] .', ';
@@ -332,7 +335,7 @@ function _webform_validate_file($form_element, &$form_state) {
   }
 
   $dot = strrpos($_FILES['files']['name'][$form_key], '.');
-  $extension = drupal_strtolower(drupal_substr($_FILES['files']['name'][$form_key], $dot+1));
+  $extension = drupal_strtolower(substr($_FILES['files']['name'][$form_key], $dot+1));
   if (!in_array($extension, $extensions)) {
     form_set_error($form_key, t("Files with the '%ext' extension are not allowed, please upload a file with a %exts extension.", array('%ext' => $extension, '%exts' => $extension_list)));
   }
@@ -391,7 +394,7 @@ function _webform_submit_file(&$data, $component) {
  *   Textual output to be included in the email.
  */
 function theme_webform_mail_file($data, $component) {
-  $file = unserialize($data);
+  $file = is_string($data) ? unserialize($data) : $data;
   $output = $component['name'] .': '. (!empty($file['filepath']) ? webform_file_url($file['filepath']) : '') ."\n";
   return $output;
 }
@@ -419,7 +422,7 @@ function _webform_submission_display_file($data, $component, $enabled = FALSE) {
     $form_item['#attributes']['readonly'] = 'readonly';
     $form_item['#default_value'] = empty($filedata['filepath']) ? $filedata['error'] : $filedata['filepath'];
   }
-  if ($filedata['filename']) {
+  if (!empty($filedata['filename'])) {
     $form_item['#suffix'] = ' <a href="'. webform_file_url($filedata['filepath']) .'">Download '. $filedata['filename'] .'</a>'. $form_item['#suffix'];
     if ($enabled) {
       $form_item['#description'] = t('Uploading a new file will replace the current file.');

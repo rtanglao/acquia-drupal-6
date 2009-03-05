@@ -1,5 +1,5 @@
 <?php
-// $Id: img_assist.module,v 1.72.2.4 2008/08/16 20:41:00 sun Exp $
+// $Id: img_assist.module,v 1.75.2.22 2009/01/18 21:51:17 sun Exp $
 
 /**
  * @file
@@ -28,9 +28,6 @@ function img_assist_help($path, $arg) {
  */
 function img_assist_theme() {
   return array(
-    'img_assist_textarea_link' => array(
-      'arguments' => array('element' => NULL, 'link' => NULL),
-    ),
     'img_assist_inline' => array(
       'arguments' => array('node' => NULL, 'size' => NULL, 'attributes' => NULL),
     ),
@@ -121,12 +118,15 @@ function img_assist_menu() {
  */
 function img_assist_init() {
   $path = drupal_get_path('module', 'img_assist');
-  if (variable_get('img_assist_page_styling', 'yes') == 'yes') {
-    drupal_add_css($path .'/img_assist.css');
+  if (arg(0) == 'img_assist') {
+    drupal_add_css($path .'/img_assist_popup.css', 'module', 'all', FALSE);
   }
-  // Assign base_path to insert in image source by javascript.
-  drupal_add_js('var BASE_URL = "'. base_path() .'";', 'inline');
-  drupal_add_js($path .'/img_assist.js');
+  else {
+    drupal_add_js($path .'/img_assist.js');
+    if (variable_get('img_assist_page_styling', 'yes') == 'yes') {
+      drupal_add_css($path .'/img_assist.css');
+    }
+  }
 }
 
 /**
@@ -147,15 +147,34 @@ function img_assist_elements() {
 }
 
 /**
- * Add image link underneath textareas.
+ * Add JavaScript settings for generating the image link underneath textareas.
  */
 function img_assist_textarea($element) {
+  static $initialized = FALSE;
+
+  if (!user_access('access img_assist')) {
+    return $element;
+  }
   $link = variable_get('img_assist_link', 'icon');
-  if (($link == 'icon') || ($link == 'text')) {
+  if ($link == 'icon' || $link == 'text') {
     if (_img_assist_textarea_match($element['#id']) && _img_assist_page_match() && !strstr($_GET['q'], 'img_assist')) {
-      if (user_access('access img_assist')) {
-        $output = theme('img_assist_textarea_link', $element, $link);
-        $element['#suffix'] = (isset($element['#suffix']) ? $element['#suffix'] . $output : $output);
+      if (!$initialized) {
+        // Add settings.
+        $settings['link'] = $link;
+        if ($link == 'icon') {
+          $settings['icon'] = drupal_get_path('module', 'img_assist') .'/add-image.jpg';
+        }
+        drupal_add_js(array('img_assist' => $settings), 'setting');
+        $initialized = TRUE;
+      }
+
+      // Attach behavior.
+      // @todo Some browsers do not support underscores in CSS classes.
+      if (!isset($element['#attributes']['class'])) {
+        $element['#attributes']['class'] = 'img_assist';
+      }
+      else {
+        $element['#attributes']['class'] .= ' img_assist';
       }
     }
   }
@@ -192,6 +211,8 @@ function img_assist_block($op = 'list', $delta = 0) {
  * Implementation of hook_settings().
  */
 function img_assist_admin_settings() {
+  require_once drupal_get_path('module', 'img_assist') .'/includes/img_assist.token.inc';
+
   // Access settings.
   $form['access'] = array(
     '#type' => 'fieldset',
@@ -230,10 +251,37 @@ function img_assist_admin_settings() {
   $form['access']['img_assist_link'] = array(
     '#type' => 'select',
     '#title' => t('Textarea image link'),
-    '#default_value' => variable_get('img_assist_link', 1),
+    '#default_value' => variable_get('img_assist_link', 'icon'),
     '#options' => array('icon' => t('Show icon'), 'text' => t('Show text link'), 'none' => t('Do not show a link')),
     '#description' => t('Choose what to show under the textareas for which Image assist is enabled.'),
   );
+
+  // Prepare select options for image browser views.
+  $options = array();
+  views_include('admin');
+  $views = views_get_all_views();
+  $base_tables = views_fetch_base_tables();
+  foreach ($views as $view) {
+    // Exclude malformed views (@see views/admin.inc).
+    if (!empty($view->disabled) || empty($view->display)) {
+      continue;
+    }
+    // Exclude views considered unusable for IA.
+    if (!($view->base_table == 'node' || $view->base_table == 'files')) {
+      continue;
+    }
+    $options[$view->name] = ($view->get_title() == '') ? $view->name : $view->get_title();
+  }
+  $form['access']['img_assist_views'] = array(
+    '#type' => 'select',
+    '#multiple' => TRUE,
+    '#title' => t('Image browser views'),
+    '#default_value' => variable_get('img_assist_views', drupal_map_assoc(array('img_assist_browser'))),
+    '#options' => $options,
+    '#required' => TRUE,
+    '#description' => t('Select the views to use for selecting images.'),
+  );
+
   if (module_exists('taxonomy')) {
     $vocs = array(0 => '<'. t('none') .'>');
     foreach (taxonomy_get_vocabularies() as $vid => $voc) {
@@ -254,17 +302,9 @@ function img_assist_admin_settings() {
   // Image settings.
   $form['image'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Image settings'),
+    '#title' => t('Image generation settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
-  );
-  $form['image']['img_assist_preview_count'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Maximum number of thumbnails per page'),
-    '#default_value' => variable_get('img_assist_preview_count', 8),
-    '#size' => 6,
-    '#maxlength' => 6,
-    '#description' => t('Enter the number of images to display in the thumbnail browser. If there are more images, next and previous links will be displayed.'),
   );
   $form['image']['img_assist_max_size'] = array(
     '#type' => 'textfield',
@@ -324,7 +364,7 @@ function img_assist_admin_settings() {
   // Other properties.
   $form['properties'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Other Properties'),
+    '#title' => t('Image property dialog settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
@@ -352,23 +392,71 @@ function img_assist_admin_settings() {
   );
   $form['properties']['img_assist_load_title'] = array(
     '#type' => 'radios',
-    '#title' => t('Preload image title'),
+    '#title' => t('Preset caption title'),
     '#default_value' => variable_get('img_assist_load_title', 1),
     '#options' => array(t('Disabled'), t('Enabled')),
     '#description' => t('If enabled, the title from the image will be loaded as the bolded caption by default.'),
   );
+  $token_installed = module_exists('token');
+  $token_instructions = (!$token_installed ? t('Requires the !token module.', array('!token' => l('Token', 'http://drupal.org/project/token'))) : t('See below for a list of available replacement patterns.'));
+  $form['properties']['img_assist_title_pattern'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Caption title pattern'),
+    '#default_value' => variable_get('img_assist_title_pattern', '[title]'),
+    '#size' => 60,
+    '#maxlength' => 255,
+    '#description' => t('The pattern to generate the bolded caption title from.') .' '. $token_instructions,
+    '#disabled' => !$token_installed,
+  );
   $form['properties']['img_assist_load_description'] = array(
     '#type' => 'radios',
-    '#title' => t('Preload image description'),
+    '#title' => t('Preset caption text'),
     '#default_value' => variable_get('img_assist_load_description', 1),
     '#options' => array(t('Disabled'), t('Enabled')),
     '#description' => t('If enabled, the body text from the image will be loaded as the caption by default.'),
   );
+  $form['properties']['img_assist_description_pattern'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Caption text pattern'),
+    '#default_value' => variable_get('img_assist_description_pattern', '[body]'),
+    '#size' => 60,
+    '#maxlength' => 255,
+    '#description' => t('The pattern to generate the caption text from.') .' '. $token_instructions,
+    '#disabled' => !$token_installed,
+  );
+  if ($token_installed) {
+    $form['properties']['token_help'] = array(
+      '#title' => t('Replacement patterns'),
+      '#type' => 'fieldset',
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    $form['properties']['token_help'][] = array(
+      '#value' => theme('token_help', 'node'),
+    );
+  }
+  if (module_exists('content')) {
+    $options = array();
+    $info = _content_type_info();
+    foreach ($info['content types']['image']['fields'] as $field) {
+      $options[$field['field_name']] = t($field['widget']['label']) .' ('. $field['field_name'] .')';
+    }
+    $form['properties']['img_assist_display_properties'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Image properties shown'),
+      '#default_value' => variable_get('img_assist_display_properties', array()),
+      '#options' => $options,
+      '#description' => t('All selected CCK fields from the Image node will be displayed in the Image Assist pop-up window.'),
+    );
+    if (empty($options)) {
+      $form['properties']['img_assist_display_properties']['#description'] .= '<br />'. t('<strong>Note:</strong> The <a href="!content-type">Image content-type</a> does not contain any CCK fields currently.', array('!content-type' => url('admin/content/node-type/image/fields')));
+    }
+  }
   
   // Image display settings.
   $form['display'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Display settings'),
+    '#title' => t('Image display settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
@@ -479,27 +567,21 @@ function img_assist_cache_clear() {
  * @todo Remove hard-coded TinyMCE integration.
  */
 function img_assist_loader() {
-  
+  $path = drupal_get_path('module', 'img_assist');
   $editor = arg(2) ? arg(2) : 'textarea';
-  
+
+  drupal_add_js($path .'/img_assist_popup.js');
+  if ($editor == 'tinymce') {
+    $tinymce_path = drupal_get_path('module', 'wysiwyg');
+    drupal_add_js($tinymce_path .'/tinymce/jscripts/tiny_mce/tiny_mce_popup.js');
+  }
+  drupal_add_js($path .'/img_assist_'. $editor .'.js');
+
   $output  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN">'."\n";
   $output .= "<html>\n";
   $output .= "<head>\n";
   $output .= '<title>'. t('Add image') ."</title>\n";
-  $output .= "\n<script type=\"text/javascript\"><!--\n";
-  $output .= '  var BASE_URL = "'. base_path() .'";'. "\n";
-  $output .= "--></script>\n";
-  
-  $path = drupal_get_path('module', 'img_assist');
-  $output .= '<script type="text/javascript" src="'. base_path() . $path .'/img_assist.js"></script>'."\n";
-  if ($editor == 'tinymce') {
-    $tinymce_path = drupal_get_path('module', 'tinymce');
-    $tinymce_js = base_path() . $tinymce_path .'/tinymce/jscripts/tiny_mce/tiny_mce_popup.js';
-    $output .= '<script type="text/javascript" src="'. $tinymce_js .'"></script>' . "\n";
-  }
-  $editor_js = base_path() . $path .'/img_assist_'. $editor .'.js';
-  $output .= '<script type="text/javascript" src="'. $editor_js .'"></script>' . "\n";
-  
+  $output .= drupal_get_js();
   $output .= "</head>\n\n";
   
   $output .= '<frameset rows="38, *" onload="initLoader()" frameborder="0" border="0" framespacing="0">' . "\n";
@@ -509,12 +591,35 @@ function img_assist_loader() {
   
   $output .= "</html>\n";
   echo $output;
+  exit;
+}
+
+/**
+ * Fetch the number of nodes for terms of given vocabulary ids.
+ *
+ * Note that this does not count nodes of subterms, as opposed to 
+ * taxonomy_term_count_nodes().
+ *
+ * @param $vids
+ *   An array of taxonomy vocabulary ids.
+ *
+ * @return
+ *   An array keyed by term ids with the count of nodes for each term.
+ */
+function _img_assist_term_count_nodes($vids) {
+  $count = array();
+  $result = db_query(db_rewrite_sql('SELECT t.tid, COUNT(n.nid) AS count FROM {term_node} t INNER JOIN {node} n ON t.vid = n.vid INNER JOIN {term_data} td ON td.tid = t.tid WHERE n.status = 1 AND td.vid IN (' . db_placeholders($vids) . ') GROUP BY t.tid'), implode(',', $vids));
+  while ($term = db_fetch_object($result)) {
+    $count[$term->tid] = $term->count;
+  }
+  return $count;
 }
 
 function img_assist_header($mode) {
   // Mode may be 'uploading', 'properties' or 'browse'.
   $output = drupal_get_form('img_assist_header_form', $mode);
   echo theme('img_assist_page', $output, array('id' => 'img_assist_header', 'onload' => 'parent.initHeader();', 'class' => 'img_assist'));
+  exit;
 }
 
 function img_assist_header_form(&$form_state, $mode) {
@@ -550,49 +655,52 @@ function img_assist_header_form(&$form_state, $mode) {
     $form[] = array('#value' => '<div id="header-browse">');
     $form[] = array('#value' => '<strong>'. t('Browse Images: ') .'</strong>');
     
-    // Get my images and count.
-    $result = db_query("SELECT COUNT(n.nid) FROM {node} n WHERE n.type='image' AND n.uid= %d", $user->uid);
-    $count  = $result ? db_result($result, 0) : 0;
-    $options['myimages'] = t('My Images') ." ($count)";
-    
-    // Get all images and count.
-    // Count all published images and the user's unpublished images.
-    if (user_access('access all images')) {
-      $result = db_query("SELECT COUNT(n.nid) FROM {node} n WHERE n.type='image' AND (n.uid = %d OR n.status = 1)", $user->uid);
-      $count = $result ? db_result($result, 0) : 0;
-      $options['allimages'] = t('All Images') ." ($count)";
-    }
-    // Get category list.
-    if (module_exists('taxonomy')) {
-      $vocabs = (array)variable_get('img_assist_vocabs', array());
-      foreach ($vocabs as $vid) {
-        $vocab = taxonomy_vocabulary_load($vid);
-        $terms = taxonomy_get_tree($vid);
-        if ($terms) {
-          foreach ($terms as $key => $value) {
-            $tid = $value->tid;
-            $name = $value->name;
-            
-            // For this term, count all published images and the user's
-            // unpublished images.
-            if (user_access('access all images')) {
-              $result = db_query("SELECT COUNT(n.nid) FROM {node} n, {term_node} t WHERE t.nid=n.nid AND n.type='image' AND t.tid = %d AND (n.uid = %d OR n.status = 1)", $tid, $user->uid);
-            }
-            // For this term, count only the user's images.
-            else {
-              $result = db_query("SELECT COUNT(n.nid) FROM {node} n, {term_node} t WHERE t.nid=n.nid AND n.type='image' AND t.tid = %d AND n.uid = %d", $tid, $user->uid);
-            }
-            $count = $result ? db_result($result, 0) : 0;
-            if ($count) {
-              $options[$vocab->name][$tid] = $name ." ($count)";
+    $views = variable_get('img_assist_views', drupal_map_assoc(array('img_assist_browser')));
+    foreach ($views as $view_name => $view_title) {
+      if ($view_name == 'img_assist_browser') {
+        // @todo execute() performs a full query, we just need the count here.
+        // Get my images and count.
+        $myimages = views_get_view('img_assist_browser');
+        $myimages->set_arguments(array($user->uid));
+        $myimages->execute();
+        $options['img_assist_browser/' . $user->uid] = t('My Images') ." ($myimages->total_rows)";
+
+        // Get all images and count.
+        if (user_access('access all images')) {
+          $allimages = views_get_view('img_assist_browser');
+          $allimages->set_arguments(array('all'));
+          $allimages->execute();
+          $options['img_assist_browser/all'] = t('All Images') ." ($allimages->total_rows)";
+        }
+        // Get category list.
+        if (module_exists('taxonomy') && $vocabs = variable_get('img_assist_vocabs', array())) {
+          $term_counts = _img_assist_term_count_nodes($vocabs);
+          // Get all images or only user's images depending on permissions.
+          $user_arg = (user_access('access all images')) ? 'all' : $user->uid;
+          foreach ($vocabs as $vid) {
+            $vocab = taxonomy_vocabulary_load($vid);
+            $terms = taxonomy_get_tree($vid);
+            if ($terms) {
+              foreach ($terms as $key => $value) {
+                $tid = $value->tid;
+                $name = $value->name;
+                $count = (isset($term_counts[$tid]) ? $term_counts[$tid] : 0);
+                $options[$vocab->name]["img_assist_browser/$user_arg/" . $tid] = "$name ($count)";
+              }
             }
           }
         }
       }
+      else {
+        $view = views_get_view($view_name);
+        $view->execute();
+        $view_title = ($view->get_title() == '') ? $view_name : $view->get_title();
+        $options[$view_name] = "$view_title ($view->total_rows)";
+      }
     }
     $form['browse'] = array(
       '#type' => 'select',
-      '#default_value' => variable_get('feed_item_length', 'teaser'),
+      '#default_value' => 'img_assist_browser/' . $user->uid,
       '#options' => $options,
       '#attributes' => array('onchange' => 'parent.onChangeBrowseBy(this)'),
     );
@@ -652,6 +760,7 @@ function img_assist_upload() {
     }
   }
   echo theme('img_assist_page', $output, array('id' => 'img_assist_upload', 'class' => 'img_assist'));
+  exit;
 }
 
 /**
@@ -665,6 +774,10 @@ function img_assist_upload() {
 function img_assist_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'image_node_form' && arg(0) == 'img_assist') {
     $form['buttons']['submit']['#submit'] = array('img_assist_node_form_submit');
+  }
+  // If a view uses exposed filters in the image browser, we need to modify #action.
+  elseif ($form_id == 'views_exposed_form' && arg(0) == 'img_assist') {
+    $form['#action'] = url($_GET['q']);
   }
 }
 
@@ -684,74 +797,51 @@ function img_assist_node_form_submit($form, &$form_state) {
 /**
  * Load the thumbnail display pane.
  *
- * Grabs all images from image.module and loads the thumbnails.
+ * Loads a View displaying the thumbnails. The view name is picked from the 
+ * third path argument and any remaining arguments are used as arguments to the
+ * view.
+ * Module developers may add options to img_assist_header_form using 
+ * hook_form_alter() if they wish to use custom views and/or arguments.
  */
 function img_assist_thumbs() {
   global $user;
   
-  if (module_exists('image')) {
-    $browse = arg(2);
-    if ($browse == 'myimages') {
-      $myimagesonly = TRUE;
-      $tid = 0;
-    }
-    elseif ($browse == 'allimages') {
-      $myimagesonly = FALSE;
-      $tid = 0;
-    }
-    else {
-      $myimagesonly = FALSE;
-      $tid = $browse;
-    }
+  if (module_exists('image') && module_exists('views')) {
+    $view_name = ((arg(2) != '') ? arg(2) : 'img_assist_browser');
     
-    $output = '<div align="center">';
+    // Get view arguments from path.
+    $args = explode('/', $_GET['q']);
+    $args = array_slice($args, 3);
     
-    // Show by term id.
-    if ($tid) {
-      // For this term, show all published images and the user's unpublished images.
-      if (user_access('access all images')) {
-        $query = "SELECT n.nid FROM {node} n, {term_node} t WHERE t.nid=n.nid AND n.type='image' AND t.tid = %d AND (n.uid = %d OR n.status = 1) ORDER BY n.sticky DESC, n.created DESC";
-        $params = array($tid, $user->uid);
+    // Check sanity and permissions for the 'img_assist_browser' view.
+    if ($view_name == 'img_assist_browser') {
+      if (empty($args[0]) || !user_access('access all images')) {
+        $args[0] = $user->uid;
       }
-      // For this term, show only the user's images.
+      if (isset($args[1])) {
+        $args[1] = (int) $args[1];
+      }
+    }
+    
+    $view = views_get_view($view_name);
+    if ($view) {
+      $view_output = $view->execute_display(NULL, $args);
+      if (empty($view_output)) {
+        $output = t('No images were found. Please upload a new image or browse images by a different category.');
+      }
       else {
-        $query = "SELECT n.nid FROM {node} n, {term_node} t WHERE t.nid=n.nid AND n.type='image' AND t.tid = %d AND n.uid = %d ORDER BY n.sticky DESC, n.created DESC";
-        $params = array($tid, $user->uid);
+        $output = $view_output;
       }
     }
     else {
-      // Show all published images and the user's unpublished images.
-      if (user_access('access all images') && (!$myimagesonly)) {
-        $query = "SELECT n.nid FROM {node} n WHERE n.type='image' AND (n.uid = %d OR n.status = 1) ORDER BY n.sticky DESC, n.created DESC";
-        $params = array($user->uid);
-      }
-      // Show only the user's images (default).
-      else {
-        $query = "SELECT n.nid FROM {node} n WHERE n.type='image' AND n.uid= %d ORDER BY n.sticky DESC, n.created DESC";
-        $params = array($user->uid);
-      }
+      $output = t('Error: The specified view was not found.');
     }
-    
-    $num_rows = FALSE;
-    $show_amount = variable_get('img_assist_preview_count', 10);
-    $result = pager_query($query, $show_amount, $element = 0, $count_query = NULL, $params);
-    while ($row = db_fetch_object($result)) {
-      $node    = node_load(array('nid' => $row->nid));
-      $image   = img_assist_display($node, IMAGE_THUMBNAIL);
-      $output .= l($image, 'img_assist/properties/'. $node->nid, array('html' => TRUE)) ."\n";
-      $num_rows = TRUE;
-    }
-    if (!$num_rows) {
-      $output .= t('No images were found. Please upload a new image or browse images by a different category.');
-    }
-    
-    $output .= theme('pager', NULL, $show_amount);
-    $output .= '</div>';
   }
   else {
-    $output = t('The image module must be enabled to use Image assist.');
+    $output = t('The Image and Views modules must be enabled to use Image assist.');
   }
   echo theme('img_assist_page', $output, array('id' => 'img_assist_thumbs', 'onload' => 'parent.initThumbs();', 'class' => 'img_assist'));
+  exit;
 }
 
 /**
@@ -763,32 +853,34 @@ function img_assist_properties() {
   $update = (arg(3)) ? 1 : 0;
   
   if (is_numeric($nid)) {
-    $node = node_load($nid);
-    
-    // Setup a default caption & description.
-    $node->title = str_replace("\r", ' ', strip_tags($node->title));
-    $node->title = str_replace("\n", ' ', trim($node->title));
-    $node->body  = str_replace("\r", ' ', strip_tags($node->body));
-    $node->body  = str_replace("\n", ' ', trim($node->body));
-    
-    $output = drupal_get_form('img_assist_properties_form', $node, $update);
+    $output = drupal_get_form('img_assist_properties_form', node_load($nid), $update);
   }
   else {
     $output = t('Image ID not found');
   }
   
   echo theme('img_assist_page', $output, array('id' => 'img_assist_properties', 'onload' => 'parent.initProperties();', 'class' => 'img_assist'));
+  exit;
+}
+
+/**
+ * Convert a node field value to text for usage in a textfield.
+ */
+function img_assist_sanitize($text) {
+  return check_plain(trim(preg_replace("/[\r\n]+/", ' ', strip_tags($text))));
 }
 
 /**
  * Construct the image properties form.
  */
 function img_assist_properties_form($form_state, $node, $update) {
+  require_once drupal_get_path('module', 'img_assist') .'/includes/img_assist.token.inc';
+
   $image_info = image_get_info(file_create_path($node->images[IMAGE_ORIGINAL]));
   
   // Select (or generate) a preview image.
   $img_assist_create_derivatives = variable_get('img_assist_create_derivatives', array());
-  if ($img_assist_create_derivatives['properties']) {
+  if (!empty($img_assist_create_derivatives['properties'])) {
     $properties_size['label'] = t('Properties');
     $properties_size['key'] = 'img_assist_properties';
     $properties_size['width'] = 200;
@@ -847,7 +939,7 @@ function img_assist_properties_form($form_state, $node, $update) {
   
   // Add a choice for 'other' if the user has the proper permission to create
   // custom sizes.
-  if ($img_assist_create_derivatives['custom_advanced'] && user_access('access advanced options')) {
+  if (!empty($img_assist_create_derivatives['custom_advanced']) && user_access('access advanced options')) {
     $derivatives['other'] = t('Other');
   }
   
@@ -872,12 +964,30 @@ function img_assist_properties_form($form_state, $node, $update) {
   $form[] = array('#value' => '<tr><td valign="top" rowspan="3" id="preview">');
   $form[] = array('#value' => $properties_image);
   $form[] = array('#value' => '<span id="caption" style="width: '. $properties_size['width'] .'px;">'. $node->title .'</span>');
+
+  // Image node properties fieldset.
+  $form['properties'] = array('#type' => 'fieldset', '#title' => t('Image properties'));
+  $form['properties'][] = array('#value' => '<div class="field field-type-text"><div class="field-label">'. t('Size') .': </div><div class="field-items"><div class="field-item">'. strtr('@widthx@height px', array('@width' => $image_info['width'], '@height' => $image_info['height'])) .'</div></div></div>');
+  $rendered = node_build_content($node);
+  foreach (array_filter(variable_get('img_assist_display_properties', array())) as $field) {
+    if (isset($node->content[$field])) {
+      $form['properties'][] = array('#value' => drupal_render($node->content[$field]));
+    }
+  }
+
   $form[] = array('#value' => '</td><td width="100%" colspan="2">');
   
+  $token_installed = module_exists('token');
+  if (variable_get('img_assist_load_title', 1)) {
+    $title = img_assist_sanitize($token_installed ? token_replace(variable_get('img_assist_title_pattern', '[title]'), 'node', $node) : $node->title);
+  }
+  if (variable_get('img_assist_load_description', 1)) {
+    $description = img_assist_sanitize($token_installed ? token_replace(variable_get('img_assist_description_pattern', '[body]'), 'node', $node) : $node->body);
+  }
   $form['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Title (optional)'),
-    '#default_value' => variable_get('img_assist_load_title', 1) ? $node->title : '',
+    '#default_value' => isset($title) ? $title : '',
     '#size' => 50,
     '#maxlength' => 255,
     '#description' => NULL,
@@ -886,7 +996,7 @@ function img_assist_properties_form($form_state, $node, $update) {
   $form['desc'] = array(
     '#type' => 'textfield',
     '#title' => t('Description (optional)'),
-    '#default_value' => variable_get('img_assist_load_description', 1) ? $node->body : '',
+    '#default_value' => isset($description) ? $description : '',
     '#size' => 50,
     '#maxlength' => 255,
     '#description' => NULL,
@@ -896,7 +1006,7 @@ function img_assist_properties_form($form_state, $node, $update) {
   // Size.
   $form[] = array('#value' => '</td></tr><tr><td width="90%">');
   $form[] = array('#value' => '<div class="form-item" id="edit-size">');
-  $form[] = array('#value' => '<label for="edit-size-label">' . t('Size: (orig @widthx@height, max @maxsize)', array('@width' => $image_info['width'], '@height' => $image_info['height'], '@maxsize' => variable_get('img_assist_max_size', '640x640'))) .'</label>');
+  $form[] = array('#value' => '<label for="edit-size-label">' . t('Size: (max @maxsize)', array('@maxsize' => variable_get('img_assist_max_size', '640x640'))) .'</label>');
   $form['size_label'] = array(
     '#type' => 'select',
     '#default_value' => variable_get('img_assist_default_label', '100x100'),
@@ -1357,13 +1467,10 @@ function img_assist_render_image($attributes = array()) {
       }
       
       if ($create_custom) {
-        // Try to get this page's nid to add to this custom image's derivative
-        // label; otherwise you can't really have the same image inline in more
-        // than one node at different custom sizes.
-        $page_nid = is_numeric(arg(2)) ? '_'. arg(2) : '';
-        
         $size['label']  = t('Custom');
-        $size['key']    = 'img_assist_custom';
+        // Add width and height to make it possible to have multiple custom
+        // sizes of the same image.
+        $size['key']    = 'img_assist_custom-' . $width . 'x' . $height;
         $size['width']  = $width;
         $size['height'] = $height;
       }
@@ -1406,6 +1513,7 @@ function img_assist_popup() {
   $attributes = array('id' => 'img_assist_popup');
   
   echo theme('img_assist_popup', $content, $attributes);
+  exit;
 }
 
 /**
@@ -1595,28 +1703,6 @@ function _img_assist_textarea_match($formid) {
  * @ingroup themeable
  */
 
-/**
- * Render a link text or button (underneath textareas).
- */
-function theme_img_assist_textarea_link($element, $link) {
-  $output = '<div class="img_assist-button">';
-  if ($link == 'icon') {
-    $link = theme('image', drupal_get_path('module', 'img_assist') .'/add-image.jpg', t('Add image'));
-  }
-  else {
-    $link = t('Add image');
-  }
-  $attribs = array(
-    'class'   => 'img_assist-link',
-    'id'      => 'img_assist-link-'. $element['#id'],
-    'title'   => t('Click here to add images'),
-    'onclick' => 'window.open(this.href, \'img_assist_link\', \'width=600,height=350,scrollbars=yes,status=yes,resizable=yes,toolbar=no,menubar=no\'); return false;',
-  );
-  $output .= l($link, 'img_assist/load/textarea', array('attributes' => $attribs, 'query' => 'textarea='. $element['#name'], 'html' => TRUE));
-  $output .= '</div>';
-  return $output;
-}
-
 function theme_img_assist_inline($node, $size, $attributes) {
   if ($attributes['title'] && $attributes['desc']) {
     $caption = '<strong>'. $attributes['title'] .': </strong>'. $attributes['desc'];
@@ -1734,7 +1820,7 @@ function theme_img_assist_page($content, $attributes = NULL) {
   $output .= drupal_get_js();
   $output .= "\n<script type=\"text/javascript\"><!-- \n";
   $output .= "  if (parent.tinyMCE) {\n";
-  $output .= "    document.write('<link href=\"' + parent.tinyMCE.getParam(\"popups_css\") + '\" rel=\"stylesheet\" type=\"text/css\">');\n";
+  $output .= "    document.write('<link href=\"' + parent.tinyMCEPopup.getParam(\"popups_css\") + '\" rel=\"stylesheet\" type=\"text/css\">');\n";
   $output .= "  } else {\n";
   foreach (drupal_add_css() as $media => $type) {
     $paths = array_merge($type['module'], $type['theme']);
@@ -1748,7 +1834,7 @@ function theme_img_assist_page($content, $attributes = NULL) {
   $output .= "  }\n";
   $output .= "--></script>\n";
   // Ensure that img_assist.js is imported last.
-  $path = drupal_get_path('module', 'img_assist') .'/img_assist.css';
+  $path = drupal_get_path('module', 'img_assist') .'/img_assist_popup.css';
   $output .= "<style type=\"text/css\" media=\"all\">@import \"". base_path() . $path ."\";</style>\n";
   
   $output .= "</head>\n";
@@ -1767,6 +1853,36 @@ function theme_img_assist_page($content, $attributes = NULL) {
 /**
  * @} End of "defgroup img_assist_theme".
  */
+
+/**
+ * Implementation of hook_wysiwyg_plugin().
+ */
+function img_assist_wysiwyg_plugin($editor, $version) {
+  switch ($editor) {
+    case 'tinymce':
+      if ($version > 3) {
+        return array(
+          'img_assist' => array(
+            'path' => drupal_get_path('module', 'img_assist') .'/drupalimage/editor_plugin.js',
+            'buttons' => array('img_assist' => t('Image Assist')),
+            'url' => 'http://drupal.org/project/img_assist',
+            'extended_valid_elements' => array('img[class|src|border=0|alt|title|width|height|align|name|style]'),
+          ),
+        );
+      }
+      break;
+  }
+}
+
+/**
+ * Implementation of hook_views_api().
+ */
+function img_assist_views_api() {
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'img_assist') .'/includes',
+  );
+}
 
 /**
  * @defgroup img_assist_legacy Image Assist Legacy functions

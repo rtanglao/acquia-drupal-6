@@ -1,5 +1,5 @@
 <?php
-// $Id: acquia_agent.module,v 1.6 2009/02/04 13:15:00 pwolanin Exp $
+// $Id: acquia_agent.module,v 1.9 2009/02/26 20:50:40 pwolanin Exp $
 
 /**
  * @file
@@ -88,6 +88,13 @@ function acquia_agent_check_subscription($params = array()) {
       $params['series']   = ACQUIA_DRUPAL_SERIES;
       $params['branch']   = ACQUIA_DRUPAL_BRANCH;
       $params['revision'] = ACQUIA_DRUPAL_REVISION;
+    }
+    // Include Acquia Search module version number.
+    if (module_exists('acquia_search')) {
+      $info = db_result(db_query("SELECT info FROM {system} WHERE name = 'acquia_search'"));
+      if ($info = unserialize($info)) {
+        $params['search_version'] = $info['version'];
+      }
     }
     $data = acquia_agent_call('acquia.agent.subscription', $params);
     $subscription['timestamp'] = time();
@@ -492,5 +499,24 @@ function acquia_agent_random_bytes($count){
 function acquia_agent_load_versions() {
   // Include version number information.
   include_once 'acquia_agent_drupal_version.inc';
+}
+
+/**
+ * Implementation of hook_form_[form_id]_alter()..
+ */
+function acquia_agent_form_system_modules_alter(&$form, &$form_state) {
+  if (isset($form['description']['acquia_search'])) {
+    $subscription = acquia_agent_settings('acquia_subscription_data');
+    if (!module_exists('acquia_search') && empty($subscription['heartbeat_data']['search_service_enabled'])) {
+      $form['status']['#disabled_modules'][] = 'acquia_search';
+      if (empty($subscription['active'])) {
+        $message = t('Acquia Search requires an active subscription to the <a href="@network-url">Acquia Network</a>. Please enter your subscription keys on the <a href="@settings-url">settings page</a> and return here for further instructions.', array('@network-url' => 'http://acquia.com/network', '@settings-url' => url('admin/settings/acquia-agent')));
+      }
+      else {
+        $message = t('Your Acquia Network subscription is not enabled for search. <a href="@url">Enable the Acquia Search network service</a>.', array('@url' => url($subscription['href'] . '/health/search')));
+      }
+      $form['description']['acquia_search']['#value'] = '<span id="acquia-agent-no-search"><strong>'. $message .'</strong></span><br />'. $form['description']['acquia_search']['#value'];
+    }  
+  }
 }
 
